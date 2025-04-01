@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildlife Annotation Tool</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>Wildlife Annotation Tool</h1>
+            
+            <div class="controls">
+                <h2>Image Navigation</h2>
+                <div class="nav-controls">
+                    <button id="prev-image">Previous</button>
+                    <span id="image-counter">Image 0 of 0</span>
+                    <button id="next-image">Next</button>
+                </div>
+                <input type="text" id="image-search" placeholder="Search by filename...">
+                <button id="search-btn">Search</button>
+            </div>
+            
+            <div class="annotation-controls">
+                <h2>Annotation</h2>
+                <select id="species-select">
+                    <option value="">Select Species</option>
+                </select>
+                
+                <div class="annotation-buttons">
+                    <button id="create-box">Create Box</button>
+                    <button id="delete-box">Delete Selected</button>
+                    <button id="save-annotations">Save All</button>
+                </div>
+                
+                <div class="annotation-info">
+                    <h3>Selected Annotation</h3>
+                    <div id="selected-box-info">
+                        <p>No box selected</p>
+                    </div>
+                </div>
+                
+                <div class="annotation-list">
+                    <h3>Annotations</h3>
+                    <ul id="annotations-list"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="annotation-canvas"></canvas>
+                <img id="current-image" style="display: none;">
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/annotator.js"></script>
+</body>
+</html>
