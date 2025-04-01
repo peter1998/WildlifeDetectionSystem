@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environmental Data Editor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        
+        .back-link {
+            color: white;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-list {
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .image-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .image-item:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .image-item.selected {
+            background-color: #e1f0fa;
+            border-left: 3px solid #3498db;
+        }
+        
+        .env-badge {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .env-badge.has-data {
+            background-color: #27ae60;
+        }
+        
+        .env-badge.no-data {
+            background-color: #e74c3c;
+        }
+        
+        .image-panel {
+            flex: 1;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .image-container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+        
+        .current-image {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+        }
+        
+        .form-panel {
+            padding: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loading-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 15px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .folder-selector {
+            margin-bottom: 15px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #2ecc71;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        .notification.error {
+            background-color: #e74c3c;
+        }
+        
+        .search-box {
+            margin-top: 15px;
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .light-condition-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            display: flex;
+        }
+        
+        .light-condition-bar div {
+            flex: 1;
+            height: 100%;
+        }
+        
+        .light-darkness {
+            background-color: #2c3e50;
+        }
+        
+        .light-early-twilight {
+            background-color: #3498db;
+        }
+        
+        .light-late-twilight {
+            background-color: #f39c12;
+        }
+        
+        .light-daylight {
+            background-color: #f1c40f;
+        }
+        
+        /* Simplified view for snow and vegetation badges */
+        .env-indicators {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .env-indicator {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .snow-badge {
+            background-color: #ecf0f1;
+            color: #34495e;
+        }
+        
+        .habitat-mountains {
+            background-color: #9b59b6;
+        }
+        
+        .habitat-plains {
+            background-color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Back to Dashboard</a>
+            <h1>Environmental Data Editor</h1>
+            <span></span> <!-- Empty span to balance the flexbox -->
+        </header>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="folder-selector">
+                    <label for="folder-select">Image Folder:</label>
+                    <select id="folder-select">
+                        <option value="">All Folders</option>
+                    </select>
+                </div>
+                
+                <input type="text" id="search-box" class="search-box" placeholder="Search images...">
+                
+                <div class="image-list" id="image-list">
+                    <!-- Images will be populated here -->
+                    <div class="image-item">Loading images...</div>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button id="prev-button" class="btn btn-secondary">Previous</button>
+                    <button id="next-button" class="btn btn-secondary">Next</button>
+                </div>
+            </div>
+            
+            <div class="image-panel">
+                <div class="image-container" id="image-container">
+                    <p>Select an image to edit environmental data</p>
+                    <!-- Current image will be displayed here -->
+                    <div class="light-condition-bar">
+                        <div class="light-darkness"></div>
+                        <div class="light-early-twilight"></div>
+                        <div class="light-late-twilight"></div>
+                        <div class="light-daylight"></div>
+                    </div>
+                </div>
+                
+                <div class="form-panel">
+                    <form id="environmental-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="light-condition">Light Condition:</label>
+                                <select id="light-condition" name="light_condition">
+                                    <option value="">-- Select --</option>
+                                    <option value="Full darkness">Full darkness</option>
+                                    <option value="Early twilight">Early twilight</option>
+                                    <option value="Late twilight">Late twilight</option>
+                                    <option value="Daylight">Daylight</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="temperature">Temperature (°C):</label>
+                                <input type="number" id="temperature" name="temperature" step="0.1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="snow-cover">Snow Cover:</label>
+                                <select id="snow-cover" name="snow_cover">
+                                    <option value="">-- Select --</option>
+                                    <option value="true">Yes</option>
+                                    <option value="false">No</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="moon-phase">Moon Phase:</label>
+                                <select id="moon-phase" name="moon_phase">
+                                    <option value="">-- Select --</option>
+                                    <option value="New Moon">New Moon</option>
+                                    <option value="Waxing Crescent">Waxing Crescent</option>
+                                    <option value="First Quarter">First Quarter</option>
+                                    <option value="Waxing Gibbous">Waxing Gibbous</option>
+                                    <option value="Full Moon">Full Moon</option>
+                                    <option value="Waning Gibbous">Waning Gibbous</option>
+                                    <option value="Last Quarter">Last Quarter</option>
+                                    <option value="Waning Crescent">Waning Crescent</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="habitat-type">Habitat Type:</label>
+                                <select id="habitat-type" name="habitat_type">
+                                    <option value="">-- Select --</option>
+                                    <option value="Mountains">Mountains</option>
+                                    <option value="Plains">Plains</option>
+                                    <option value="Mixed">Mixed</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="vegetation-type">Vegetation Type:</label>
+                                <select id="vegetation-type" name="vegetation_type">
+                                    <option value="">-- Select --</option>
+                                    <option value="Forest">Forest</option>
+                                    <option value="Meadow">Meadow</option>
+                                    <option value="Shrubland">Shrubland</option>
+                                    <option value="Mixed">Mixed</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="buttons">
+                            <button type="button" id="auto-detect-btn" class="btn btn-secondary">Auto-Detect</button>
+                            <div>
+                                <button type="button" id="delete-btn" class="btn btn-danger">Delete Data</button>
+                                <button type="submit" id="save-btn" class="btn btn-primary">Save Data</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loading-text">Loading...</p>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification">
+        This is a notification message
+    </div>
+    
+    <script>
+        // Global variables
+        let currentImageId = null;
+        let images = [];
+        let currentImageIndex = -1;
+        
+        // DOM Elements
+        const folderSelect = document.getElementById('folder-select');
+        const imageList = document.getElementById('image-list');
+        const imageContainer = document.getElementById('image-container');
+        const environmentalForm = document.getElementById('environmental-form');
+        const loading = document.getElementById('loading');
+        const notification = document.getElementById('notification');
+        const searchBox = document.getElementById('search-box');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        
+        // Add event listeners
+        folderSelect.addEventListener('change', loadImagesFromFolder);
+        environmentalForm.addEventListener('submit', saveEnvironmentalData);
+        document.getElementById('auto-detect-btn').addEventListener('click', autoDetectEnvironmentalData);
+        document.getElementById('delete-btn').addEventListener('click', deleteEnvironmentalData);
+        prevButton.addEventListener('click', loadPreviousImage);
+        nextButton.addEventListener('click', loadNextImage);
+        searchBox.addEventListener('input', filterImages);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initialize);
+        
+        async function initialize() {
+            showLoading('Initializing application...');
+            try {
+                // Load folders
+                await loadFolders();
+                
+                // Load all images
+                await loadImagesFromFolder();
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error initializing application:', error);
+                showNotification('Error initializing application. Please try reloading the page.', true);
+                hideLoading();
+            }
+        }
+        
+        async function loadFolders() {
+            try {
+                const response = await fetch('/api/images/folders');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Populate folder dropdown
+                    folderSelect.innerHTML = '<option value="">All Folders</option>';
+                    
+                    data.folders.forEach(folder => {
+                        const option = document.createElement('option');
+                        option.value = folder;
+                        option.textContent = folder;
+                        folderSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                throw error;
+            }
+        }
+        
+        async function loadImagesFromFolder() {
+            showLoading('Loading images...');
+            
+            try {
+                const folder = folderSelect.value;
+                
+                // Load all images (get a larger batch)
+                let allImages = [];
+                let page = 1;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const url = `/api/images/?page=${page}&per_page=100${folder ? `&folder=${folder}` : ''}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        allImages = allImages.concat(data.images);
+                        
+                        if (data.images.length < 100) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to load images');
+                    }
+                }
+                
+                // Update global images array
+                images = allImages;
+                
+                // Reset current image
+                currentImageId = null;
+                currentImageIndex = -1;
+                
+                // Update image list
+                updateImageList();
+                
+                // Clear image panel
+                clearImagePanel();
+                
+                hideLoading();
+                
+                // If there are images, select the first one
+                if (images.length > 0) {
+                    selectImage(images[0].id);
+                }
+            } catch (error) {
+                console.error('Error loading images:', error);
+                showNotification('Error loading images. Please try again.', true);
+                
+                // Show error in image list
+                imageList.innerHTML = '<div class="image-item">Error loading images. Please try again.</div>';
+                
+                hideLoading();
+            }
+        }
+        
+        function updateImageList() {
+            if (images.length === 0) {
+                imageList.innerHTML = '<div class="image-item">No images found</div>';
+                return;
+            }
+            
+            imageList.innerHTML = '';
+            
+            images.forEach(image => {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                item.dataset.id = image.id;
+                
+                if (image.id === currentImageId) {
+                    item.classList.add('selected');
+                }
+                
+                // Create badge to indicate if environmental data exists
+                const badge = document.createElement('span');
+                badge.className = 'env-badge no-data'; // Default to no data
+                
+                // Add filename
+                const filename = document.createElement('span');
+                filename.textContent = image.filename;
+                
+                item.appendChild(badge);
+                item.appendChild(filename);
+                
+                item.addEventListener('click', () => {
+                    selectImage(image.id);
+                });
+                
+                imageList.appendChild(item);
+            });
+            
+            // Update environment badges (requires API call to check which images have environmental data)
+            checkEnvironmentalData();
+        }
+        
+        async function checkEnvironmentalData() {
+            // This would be more efficient with a bulk endpoint
+            // For now, we'll make individual calls in the background
+            
+            // Get all image items
+            const imageItems = document.querySelectorAll('.image-item');
+            
+            for (const item of imageItems) {
+                const imageId = item.dataset.id;
+                
+                try {
+                    const response = await fetch(`/api/environmental/image/${imageId}`);
+                    const data = await response.json();
+                    
+                    const badge = item.querySelector('.env-badge');
+                    
+                    if (data.success && data.data) {
+                        badge.className = 'env-badge has-data';
+                    } else {
+                        badge.className = 'env-badge no-data';
+                    }
+                } catch (error) {
+                    console.error(`Error checking environmental data for image ${imageId}:`, error);
+                }
+            }
+        }
+        
+        async function selectImage(imageId) {
+            showLoading('Loading image...');
+            
+            try {
+                // Find image in array
+                const imageIndex = images.findIndex(img => img.id === parseInt(imageId));
+                
+                if (imageIndex === -1) {
+                    throw new Error('Image not found');
+                }
+                
+                // Update current image
+                currentImageId = parseInt(imageId);
+                currentImageIndex = imageIndex;
+                const image = images[imageIndex];
+                
+                // Update selected item in list
+                const items = document.querySelectorAll('.image-item');
+                items.forEach(item => {
+                    item.classList.remove('selected');
+                    
+                    if (parseInt(item.dataset.id) === currentImageId) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+                
+                // Load image
+                imageContainer.innerHTML = '';
+                
+                const imgElement = document.createElement('img');
+                imgElement.className = 'current-image';
+                imgElement.src = `/api/images/${imageId}/file`;
+                imgElement.alt = image.filename;
+                
+                imgElement.onload = () => {
+                    hideLoading();
+                };
+                
+                imgElement.onerror = () => {
+                    hideLoading();
+                    imageContainer.innerHTML = '<p>Error loading image</p>';
+                };
+                
+                // Add light condition indicator bar
+                const lightBar = document.createElement('div');
+                lightBar.className = 'light-condition-bar';
+                
+                const darkness = document.createElement('div');
+                darkness.className = 'light-darkness';
+                
+                const earlyTwilight = document.createElement('div');
+                earlyTwilight.className = 'light-early-twilight';
+                
+                const lateTwilight = document.createElement('div');
+                lateTwilight.className = 'light-late-twilight';
+                
+                const daylight = document.createElement('div');
+                daylight.className = 'light-daylight';
+                
+                lightBar.appendChild(darkness);
+                lightBar.appendChild(earlyTwilight);
+                lightBar.appendChild(lateTwilight);
+                lightBar.appendChild(daylight);
+                
+                // Add environmental indicators
+                const envIndicators = document.createElement('div');
+                envIndicators.className = 'env-indicators';
+                
+                imageContainer.appendChild(imgElement);
+                imageContainer.appendChild(lightBar);
+                imageContainer.appendChild(envIndicators);
+                
+                // Load environmental data
+                await loadEnvironmentalData(imageId);
+                
+            } catch (error) {
+                console.error('Error selecting image:', error);
+                showNotification('Error loading image. Please try again.', true);
+                hideLoading();
+            }
+        }
+        
+        async function loadEnvironmentalData(imageId) {
+            try {
+                const response = await fetch(`/api/environmental/image/${imageId}`);
+                const data = await response.json();
+                
+                // Reset form
+                environmentalForm.reset();
+                
+                if (data.success && data.data) {
+                    // Populate form with data
+                    document.getElementById('light-condition').value = data.data.light_condition || '';
+                    document.getElementById('temperature').value = data.data.temperature || '';
+                    document.getElementById('snow-cover').value = data.data.snow_cover ? 'true' : 'false';
+                    document.getElementById('moon-phase').value = data.data.moon_phase || '';
+                    document.getElementById('habitat-type').value = data.data.habitat_type || '';
+                    document.getElementById('vegetation-type').value = data.data.vegetation_type || '';
+                    
+                    // Update light condition indicator
+                    updateLightConditionIndicator(data.data.light_condition);
+                    
+                    // Update environmental indicators
+                    updateEnvironmentalIndicators(data.data);
+                } else {
+                    // Reset light condition indicator
+                    updateLightConditionIndicator(null);
+                    
+                    // Reset environmental indicators
+                    updateEnvironmentalIndicators(null);
+                }
+            } catch (error) {
+                console.error('Error loading environmental data:', error);
+                showNotification('Error loading environmental data. Please try again.', true);
+            }
+        }
+        
+        function updateLightConditionIndicator(lightCondition) {
+            const lightBar = document.querySelector('.light-condition-bar');
+            
+            if (!lightBar) return;
+            
+            // Reset all to default opacity
+            lightBar.querySelectorAll('div').forEach(div => {
+                div.style.opacity = '0.3';
+            });
+            
+            if (lightCondition) {
+                if (lightCondition === 'Full darkness') {
+                    lightBar.querySelector('.light-darkness').style.opacity = '1';
+                } else if (lightCondition === 'Early twilight') {
+                    lightBar.querySelector('.light-early-twilight').style.opacity = '1';
+                } else if (lightCondition === 'Late twilight') {
+                    lightBar.querySelector('.light-late-twilight').style.opacity = '1';
+                } else if (lightCondition === 'Daylight') {
+                    lightBar.querySelector('.light-daylight').style.opacity = '1';
+                }
+            }
+        }
+        
+        function updateEnvironmentalIndicators(envData) {
+            const envIndicators = document.querySelector('.env-indicators');
+            
+            if (!envIndicators) return;
+            
+            envIndicators.innerHTML = '';
+            
+            if (!envData) return;
+            
+            // Add snow cover indicator
+            if (envData.snow_cover) {
+                const snowBadge = document.createElement('div');
+                snowBadge.className = 'env-indicator snow-badge';
+                snowBadge.textContent = 'Snow';
+                envIndicators.appendChild(snowBadge);
+            }
+            
+            // Add habitat type indicator
+            if (envData.habitat_type) {
+                const habitatBadge = document.createElement('div');
+                habitatBadge.className = `env-indicator habitat-${envData.habitat_type.toLowerCase()}`;
+                habitatBadge.textContent = envData.habitat_type;
+                envIndicators.appendChild(habitatBadge);
+            }
+        }
+        
+        async function saveEnvironmentalData(e) {
+            e.preventDefault();
+            
+            if (!currentImageId) {
+                showNotification('No image selected', true);
+                return;
+            }
+            
+            showLoading('Saving environmental data...');
+            
+            try {
+                // Get form data
+                const formData = {
+                    light_condition: document.getElementById('light-condition').value || null,
+                    temperature: document.getElementById('temperature').value ? parseFloat(document.getElementById('temperature').value) : null,
+                    snow_cover: document.getElementById('snow-cover').value === 'true' ? true : (document.getElementById('snow-cover').value === 'false' ? false : null),
+                    moon_phase: document.getElementById('moon-phase').value || null,
+                    habitat_type: document.getElementById('habitat-type').value || null,
+                    vegetation_type: document.getElementById('vegetation-type').value || null
+                };
+                
+                // Send request
+                const response = await fetch(`/api/environmental/image/${currentImageId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Environmental data saved successfully');
+                    
+                    // Update light condition indicator
+                    updateLightConditionIndicator(formData.light_condition);
+                    
+                    // Update environmental indicators
+                    updateEnvironmentalIndicators(formData);
+                    
+                    // Update badge in image list
+                    const item = imageList.querySelector(`.image-item[data-id="${currentImageId}"]`);
+                    if (item) {
+                        const badge = item.querySelector('.env-badge');
+                        badge.className = 'env-badge has-data';
+                    }
+                } else {
+                    showNotification('Error saving environmental data: ' + data.message, true);
+                }
+            } catch (error) {
+                console.error('Error saving environmental data:', error);
+                showNotification('Error saving environmental data. Please try again.', true);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function deleteEnvironmentalData() {
+            if (!currentImageId) {
+                showNotification('No image selected', true);
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete environmental data for this image?')) {
+                return;
+            }
+            
+            showLoading('Deleting environmental data...');
+            
+            try {
+                const response = await fetch(`/api/environmental/image/${currentImageId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Environmental data deleted successfully');
+                    
+                    // Reset form
+                    environmentalForm.reset();
+                    
+                    // Reset light condition indicator
+                    updateLightConditionIndicator(null);
+                    
+                    // Reset environmental indicators
+                    updateEnvironmentalIndicators(null);
+                    
+                    // Update badge in image list
+                    const item = imageList.querySelector(`.image-item[data-id="${currentImageId}"]`);
+                    if (item) {
+                        const badge = item.querySelector('.env-badge');
+                        badge.className = 'env-badge no-data';
+                    }
+                } else {
+                    showNotification('Error deleting environmental data: ' + data.message, true);
+                }
+            } catch (error) {
+                console.error('Error deleting environmental data:', error);
+                showNotification('Error deleting environmental data. Please try again.', true);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function autoDetectEnvironmentalData() {
+            if (!currentImageId) {
+                showNotification('No image selected', true);
+                return;
+            }
+            
+            showLoading('Auto-detecting environmental data...');
+            
+            try {
+                // Get filename to detect from
+                const image = images.find(img => img.id === currentImageId);
+                
+                if (!image) {
+                    throw new Error('Image not found');
+                }
+                
+                const filename = image.filename;
+                
+                // Light condition detection based on filename patterns
+                let lightCondition = null;
+                if (filename.toLowerCase().includes('night') || filename.toLowerCase().includes('noc')) {
+                    lightCondition = 'Full darkness';
+                } else if (filename.toLowerCase().includes('dawn') || filename.toLowerCase().includes('sunrise')) {
+                    lightCondition = 'Early twilight';
+                } else if (filename.toLowerCase().includes('dusk') || filename.toLowerCase().includes('sunset')) {
+                    lightCondition = 'Late twilight';
+                } else if (filename.toLowerCase().includes('day')) {
+                    lightCondition = 'Daylight';
+                } else {
+                    // Default to daylight if we can't detect
+                    lightCondition = 'Daylight';
+                }
+                
+                // Snow cover detection
+                let snowCover = null;
+                if (filename.toLowerCase().includes('snow') || filename.toLowerCase().includes('winter') || 
+                    filename.toLowerCase().includes('сняг')) {
+                    snowCover = true;
+                } else {
+                    // Try to detect from date (winter months)
+                    const datePattern = /(\d{1,2})[-_](\d{1,2})[-_](\d{2,4})/;
+                    const match = filename.match(datePattern);
+                    
+                    if (match) {
+                        const month = parseInt(match[2], 10);
+                        if ([12, 1, 2, 3].includes(month)) {
+                            snowCover = true;
+                        } else {
+                            snowCover = false;
+                        }
+                    } else {
+                        snowCover = false;
+                    }
+                }
+                
+                // Habitat type detection
+                let habitatType = null;
+                if (filename.toLowerCase().includes('mountain') || filename.toLowerCase().includes('planina') ||
+                    filename.toLowerCase().includes('стара')) {
+                    habitatType = 'Mountains';
+                } else if (filename.toLowerCase().includes('plain') || filename.toLowerCase().includes('field') ||
+                          filename.toLowerCase().includes('meadow')) {
+                    habitatType = 'Plains';
+                } else {
+                    habitatType = 'Mixed';
+                }
+                
+                // Vegetation type detection
+                let vegetationType = null;
+                if (filename.toLowerCase().includes('forest') || filename.toLowerCase().includes('woods')) {
+                    vegetationType = 'Forest';
+                } else if (filename.toLowerCase().includes('meadow') || filename.toLowerCase().includes('field')) {
+                    vegetationType = 'Meadow';
+                } else if (filename.toLowerCase().includes('shrub') || filename.toLowerCase().includes('bush')) {
+                    vegetationType = 'Shrubland';
+                } else {
+                    vegetationType = 'Mixed';
+                }
+                
+                // Temperature estimation based on month
+                let temperature = null;
+                const datePattern = /(\d{1,2})[-_](\d{1,2})[-_](\d{2,4})/;
+                const match = filename.match(datePattern);
+                
+                if (match) {
+                    const month = parseInt(match[2], 10);
+                    // Very rough temperature mapping for Bulgaria
+                    const monthTemps = {
+                        1: 0,  // January
+                        2: 2,  // February
+                        3: 8,  // March
+                        4: 13, // April
+                        5: 18, // May
+                        6: 22, // June
+                        7: 25, // July
+                        8: 25, // August
+                        9: 20, // September
+                        10: 15, // October
+                        11: 8,  // November
+                        12: 2   // December
+                    };
+                    
+                    temperature = monthTemps[month] || null;
+                }
+                
+                // Update form
+                document.getElementById('light-condition').value = lightCondition;
+                document.getElementById('snow-cover').value = snowCover !== null ? String(snowCover) : '';
+                document.getElementById('habitat-type').value = habitatType;
+                document.getElementById('vegetation-type').value = vegetationType;
+                
+                if (temperature !== null) {
+                    document.getElementById('temperature').value = temperature;
+                }
+                
+                showNotification('Auto-detection complete. Please review and save.');
+                
+                // Update light condition indicator
+                updateLightConditionIndicator(lightCondition);
+                
+                // Update environmental indicators
+                updateEnvironmentalIndicators({
+                    light_condition: lightCondition,
+                    snow_cover: snowCover,
+                    habitat_type: habitatType,
+                    vegetation_type: vegetationType,
+                    temperature: temperature
+                });
+                
+            } catch (error) {
+                console.error('Error auto-detecting environmental data:', error);
+                showNotification('Error auto-detecting environmental data. Please try again.', true);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function loadPreviousImage() {
+            if (currentImageIndex > 0) {
+                selectImage(images[currentImageIndex - 1].id);
+            } else {
+                showNotification('This is the first image', true);
+            }
+        }
+        
+        function loadNextImage() {
+            if (currentImageIndex < images.length - 1) {
+                selectImage(images[currentImageIndex + 1].id);
+            } else {
+                showNotification('This is the last image', true);
+            }
+        }
+        
+        function filterImages() {
+            const searchTerm = searchBox.value.toLowerCase();
+            
+            // Filter images by filename
+            const filteredImages = images.filter(image => 
+                image.filename.toLowerCase().includes(searchTerm)
+            );
+            
+            // Clear list
+            imageList.innerHTML = '';
+            
+            if (filteredImages.length === 0) {
+                imageList.innerHTML = '<div class="image-item">No matching images found</div>';
+                return;
+            }
+            
+            // Repopulate list
+            filteredImages.forEach(image => {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                item.dataset.id = image.id;
+                
+                if (image.id === currentImageId) {
+                    item.classList.add('selected');
+                }
+                
+                // Create badge to indicate if environmental data exists
+                const badge = document.createElement('span');
+                badge.className = 'env-badge no-data'; // Default to no data
+                
+                // Add filename
+                const filename = document.createElement('span');
+                filename.textContent = image.filename;
+                
+                item.appendChild(badge);
+                item.appendChild(filename);
+                
+                item.addEventListener('click', () => {
+                    selectImage(image.id);
+                });
+                
+                imageList.appendChild(item);
+            });
+            
+            // Update environment badges
+            checkEnvironmentalData();
+        }
+        
+        function clearImagePanel() {
+            imageContainer.innerHTML = '<p>Select an image to edit environmental data</p>';
+            environmentalForm.reset();
+        }
+        
+        function showLoading(message = 'Loading...') {
+            document.getElementById('loading-text').textContent = message;
+            loading.classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+        
+        function showNotification(message, isError = false) {
+            const notificationElement = document.getElementById('notification');
+            notificationElement.textContent = message;
+            notificationElement.className = 'notification';
+            
+            if (isError) {
+                notificationElement.classList.add('error');
+            }
+            
+            notificationElement.classList.add('show');
+            
+            setTimeout(() => {
+                notificationElement.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
