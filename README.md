@@ -11,6 +11,8 @@ This system allows researchers to:
 - Track annotation progress across multiple datasets
 - Analyze wildlife behavior patterns and habitat usage
 
+This project is critically important for our state's wildlife conservation efforts. It provides essential data for understanding biodiversity, monitoring endangered species, and implementing effective conservation strategies.
+
 ## Features
 
 - **Image Management**: Index, upload, and organize camera trap images
@@ -121,20 +123,22 @@ Use the API endpoints:
 
 ## Development Roadmap
 
-### Phase 1: Basic Recognition
+### Phase 1: Basic Recognition (Current)
 - Identify complete animals in good conditions
 - Integrate with existing labeled image database
 - Basic differentiation of target species
 
-### Phase 2: Advanced Recognition
+### Phase 2: Advanced Recognition (May-June 2025)
 - Recognize partial silhouettes and characteristic features
+- Improve identification of blurry silhouettes of similar species (wolf/jackal)
 - Adapt to various imaging conditions
 - Integrate environmental factors
 
-### Phase 3: Complex Analysis
-- Diurnal and seasonal activity
-- Species interaction tracking
-- Behavioral pattern analysis
+### Phase 3: Complex Analysis (Q3-Q4 2025)
+- Seasonal and annual activity patterns (not monthly)
+- Species interaction tracking and chronological analysis
+- Behavioral pattern recognition
+- Microhabitat analysis including vegetation and environmental conditions
 
 ## Documentation
 
