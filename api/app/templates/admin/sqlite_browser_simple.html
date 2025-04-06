@@ -1,0 +1,46 @@
+
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container">
+    <h1>SQLite Browser</h1>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Database Tables</h3>
+                </div>
+                <div class="panel-body">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Table Name</th>
+                                <th>Record Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for table in tables %}
+                            <tr>
+                                <td>{{ table }}</td>
+                                <td>{{ table_counts[table] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Custom SQL Query</h3>
+                </div>
+                <div class="panel-body">
+                    <a href="{{ url_for('.custom_query') }}" class="btn btn-primary">
+                        <i class="glyphicon glyphicon-console"></i> SQL Query Tool
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

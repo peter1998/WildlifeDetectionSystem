@@ -1,0 +1,37 @@
+
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container">
+    <h1>SQLite Browser</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Database Tables</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="list-group">
+                        {% for table in tables %}
+                        <a href="{{ url_for('.view_table', table_name=table) }}" class="list-group-item">
+                            {{ table }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Custom SQL Query</h3>
+                </div>
+                <div class="panel-body">
+                    <a href="{{ url_for('.custom_query') }}" class="btn btn-primary">
+                        <i class="glyphicon glyphicon-console"></i> SQL Query Tool
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

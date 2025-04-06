@@ -1,0 +1,31 @@
+
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Dangerous Operations</h1>
+            <p class="lead">This page contains actions that will permanently delete data. Use with caution!</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Delete All Annotations</h3>
+                </div>
+                <div class="panel-body">
+                    <p>This will permanently delete <strong>ALL</strong> annotation records from the database. This action cannot be undone.</p>
+                    
+                    <form method="post" action="{{ url_for('delete_actions.delete_all_annotations') }}" onsubmit="return confirm('Are you ABSOLUTELY SURE you want to delete ALL annotation records? This CANNOT be undone!');">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="glyphicon glyphicon-trash"></i> Delete All Annotations
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
