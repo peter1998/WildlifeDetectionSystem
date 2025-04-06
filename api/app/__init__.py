@@ -69,19 +69,25 @@ def create_app(config_name='development', init_admin=True):
     from .routes.static_routes import static_pages as static_pages_blueprint
     from .routes.environmental_routes import environmental as environmental_blueprint
     
-    # Register blueprints with unique names
+    # Register static_pages blueprint first to handle the root URL
+    try:
+        app.register_blueprint(static_pages_blueprint)
+        logger.info("Registered blueprint: static_pages")
+    except Exception as e:
+        logger.error(f"Failed to register static_pages blueprint: {e}")
+    
+    # Then register the rest of the blueprints
     blueprint_mappings = [
-        (main_blueprint, 'main_routes'),
-        (images_blueprint, 'images_routes'),
-        (species_blueprint, 'species_routes'),
-        (annotations_blueprint, 'annotations_routes'),
-        (static_pages_blueprint, 'static_pages_routes'),
-        (environmental_blueprint, 'environmental_routes')
+        (main_blueprint, 'main'),
+        (images_blueprint, 'images'),
+        (species_blueprint, 'species'),
+        (annotations_blueprint, 'annotations'),
+        (environmental_blueprint, 'environmental')
     ]
     
     for blueprint, name in blueprint_mappings:
         try:
-            app.register_blueprint(blueprint, name=name)
+            app.register_blueprint(blueprint)
             logger.info(f"Registered blueprint: {name}")
         except Exception as e:
             logger.error(f"Failed to register blueprint {name}: {e}")

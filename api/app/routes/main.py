@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, jsonify, current_app, redirect, url_for
 import platform
 import sys
 import flask
@@ -7,7 +7,8 @@ import sqlalchemy
 # Create a blueprint for main routes
 main = Blueprint('main', __name__)
 
-@main.route('/')
+# Change the root route to redirect to the dashboard
+@main.route('/api')
 def index():
     """Root endpoint for the API."""
     return jsonify({
