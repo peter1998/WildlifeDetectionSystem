@@ -193,22 +193,22 @@
             <h2 class="status-title">System Status</h2>
             <div class="status-grid">
                 <div class="status-item">
-                    <div id="total-images" class="status-value">-</div>
+                    <div id="total-images" class="status-value">{{ total_images }}</div>
                     <div class="status-label">Total Images</div>
                 </div>
                 <div class="status-item">
-                    <div id="annotated-images" class="status-value">-</div>
+                    <div id="annotated-images" class="status-value">{{ annotated_images }}</div>
                     <div class="status-label">Annotated Images</div>
                     <div class="progress-bar">
-                        <div id="annotation-progress" class="progress-fill"></div>
+                        <div id="annotation-progress" class="progress-fill" style="width: {{ annotation_percentage }}%;"></div>
                     </div>
                 </div>
                 <div class="status-item">
-                    <div id="species-count" class="status-value">-</div>
+                    <div id="species-count" class="status-value">{{ species_count }}</div>
                     <div class="status-label">Species</div>
                 </div>
                 <div class="status-item">
-                    <div id="folder-count" class="status-value">-</div>
+                    <div id="folder-count" class="status-value">{{ folder_count }}</div>
                     <div class="status-label">Image Folders</div>
                 </div>
             </div>
@@ -284,60 +284,24 @@
         // Load system status
         async function loadSystemStatus() {
             try {
-                // Show loading state
-                document.getElementById('total-images').textContent = '...';
-                document.getElementById('annotated-images').textContent = '...';
-                document.getElementById('species-count').textContent = '...';
-                document.getElementById('folder-count').textContent = '...';
-                
-                // Fetch image count
-                const imagesResponse = await fetch('/api/images/');
-                const imagesData = await imagesResponse.json();
-                
-                // Fetch species count
-                const speciesResponse = await fetch('/api/species/');
-                const speciesData = await speciesResponse.json();
-                
-                // Fetch folders
-                const foldersResponse = await fetch('/api/images/folders');
-                const foldersData = await foldersResponse.json();
-                
-                // Count annotated images
-                let annotatedCount = 0;
-                let totalCount = 0;
-                
-                if (imagesData.items) {
-                    totalCount = imagesData.total || imagesData.items.length;
+                // Try to fetch latest stats from API
+                const response = await fetch('/api/system/stats');
+                if (response.ok) {
+                    const stats = await response.json();
                     
-                    // Подсчитайте анотираните изображения, ако е налично свойството is_annotated
-                    if (imagesData.items[0] && 'is_annotated' in imagesData.items[0]) {
-                        annotatedCount = imagesData.items.filter(img => img.is_annotated).length;
-                    } else {
-                        // Алтернативен метод - проверете анотациите на всяко изображение
-                        // Този подход може да изисква допълнителни API заявки
-                        annotatedCount = 0; // Временно, докато имплементираме по-добър метод
-                    }
+                    // Update UI with latest values
+                    document.getElementById('total-images').textContent = stats.total_images || 0;
+                    document.getElementById('annotated-images').textContent = stats.annotated_images || 0;
+                    document.getElementById('species-count').textContent = stats.species_count || 0;
+                    document.getElementById('folder-count').textContent = stats.folder_count || 0;
+                    
+                    // Update progress bar
+                    let progressPercent = stats.annotation_percentage || 0;
+                    document.getElementById('annotation-progress').style.width = `${progressPercent}%`;
                 }
-                
-                // Update UI
-                document.getElementById('total-images').textContent = totalCount || 0;
-                document.getElementById('annotated-images').textContent = annotatedCount;
-                document.getElementById('species-count').textContent = speciesData.items?.length || 0;
-                document.getElementById('folder-count').textContent = foldersData.folders?.length || 0;
-                
-                // Update progress bar
-                let progressPercent = 0;
-                if (totalCount > 0) {
-                    progressPercent = (annotatedCount / totalCount * 100);
-                }
-                document.getElementById('annotation-progress').style.width = `${progressPercent}%`;
             } catch (error) {
-                console.error('Error loading system status:', error);
-                // Show error state
-                document.getElementById('total-images').textContent = 'Error';
-                document.getElementById('annotated-images').textContent = 'Error';
-                document.getElementById('species-count').textContent = 'Error';
-                document.getElementById('folder-count').textContent = 'Error';
+                console.error('Error updating system status:', error);
+                // Error state not needed since we already have server-rendered values
             }
         }
         
@@ -421,8 +385,11 @@
             }
         });
         
-        // Load system status on page load
-        document.addEventListener('DOMContentLoaded', loadSystemStatus);
+        // Load system status on page load after a short delay
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait 2 seconds before updating to let the page fully load
+            setTimeout(loadSystemStatus, 2000);
+        });
     </script>
 </body>
 </html>
