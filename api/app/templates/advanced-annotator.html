@@ -274,6 +274,49 @@
         .notification.show {
             opacity: 1;
         }
+        
+        /* New styles for annotation status and filter dropdown */
+        .status-indicator {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .annotated {
+            background-color: #27ae60;
+            color: white;
+        }
+        
+        .not-annotated {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-right: 15px;
+        }
+        
+        .filter-container select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+        
+        .filter-badge {
+            display: inline-block;
+            background-color: #34495e;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -286,8 +329,19 @@
                 </svg>
                 Dashboard
             </a>
+            <!-- Add annotation status indicator -->
+            <div id="annotation-status" class="status-indicator not-annotated">Not Annotated</div>
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- Add filter dropdown -->
+            <div class="filter-container">
+                <label for="filter-dropdown">Filter:</label>
+                <select id="filter-dropdown">
+                    <option value="all">All Images</option>
+                    <option value="annotated">Annotated</option>
+                    <option value="unannotated">Not Annotated</option>
+                </select>
+            </div>
             <select id="folder-select" style="padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white;">
                 <option value="">All Folders</option>
                 <!-- Folders will be populated dynamically -->
@@ -406,9 +460,17 @@
             }
 
             // Fetch images (with pagination)
-            async fetchImages(page = 1, perPage = 20, folder = '') {
+            async fetchImages(page = 1, perPage = 20, folder = '', filter = 'all') {
                 try {
-                    let url = `${this.baseUrl}/api/images/?page=${page}&per_page=${perPage}`;
+                    let url;
+                    if (filter === 'annotated') {
+                        url = `${this.baseUrl}/api/images/annotated?page=${page}&per_page=${perPage}`;
+                    } else if (filter === 'unannotated') {
+                        url = `${this.baseUrl}/api/images/unannotated?page=${page}&per_page=${perPage}`;
+                    } else {
+                        url = `${this.baseUrl}/api/images/?page=${page}&per_page=${perPage}`;
+                    }
+                    
                     if (folder) {
                         url += `&folder=${encodeURIComponent(folder)}`;
                     }
@@ -514,6 +576,7 @@
             let panOffset = { x: 0, y: 0 };
             let speciesMap = {};
             let annotatedImagesCount = 0;
+            let currentFilter = 'all'; // Track the current filter
             
             // Variables for drag operations
             let dragMode = null; // 'move', 'resize-tl', 'resize-tr', 'resize-bl', 'resize-br', 'resize-t', 'resize-r', 'resize-b', 'resize-l'
@@ -539,6 +602,8 @@
             const speciesList = document.getElementById('species-list');
             const annotationList = document.getElementById('annotation-list');
             const folderSelect = document.getElementById('folder-select');
+            const filterDropdown = document.getElementById('filter-dropdown');
+            const annotationStatus = document.getElementById('annotation-status');
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
             const submitBtn = document.getElementById('submit-btn');
@@ -552,6 +617,34 @@
             submitBtn.addEventListener('click', submitAnnotations);
             noAnimalsBtn.addEventListener('click', markNoAnimals);
             speciesSearch.addEventListener('input', filterSpecies);
+            
+            // Add filter dropdown event listener
+            if (filterDropdown) {
+                filterDropdown.addEventListener('change', async function() {
+                    currentFilter = this.value;
+                    showLoading();
+                    
+                    try {
+                        // Load images with the selected filter
+                        await loadImages(currentFolder);
+                        
+                        // Load first image if available
+                        if (allImages.length > 0) {
+                            await loadImage(allImages[0].id);
+                        } else {
+                            clearCanvas();
+                            updateImageCount();
+                            showNotification('No images match the selected filter.', true);
+                        }
+                    } catch (error) {
+                        console.error('Error applying filter:', error);
+                        showNotification('Error applying filter.', true);
+                    } finally {
+                        hideLoading();
+                    }
+                });
+            }
+            
             folderSelect.addEventListener('change', async function() {
                 currentFolder = this.value;
                 showLoading();
@@ -718,7 +811,7 @@
                 }
             }
             
-            // Function to load images from API - modified to load ALL images in a folder
+            // Function to load images from API - modified to use current filter
             async function loadImages(folder = '') {
                 showLoading();
                 try {
@@ -727,11 +820,11 @@
                     let hasMorePages = true;
                     const perPage = 1000; // Request larger batches
                     
-                    console.log(`Loading all images from folder: ${folder || 'All Folders'}`);
+                    console.log(`Loading ${currentFilter} images from folder: ${folder || 'All Folders'}`);
                     
                     // Keep fetching pages until we have all images
                     while (hasMorePages) {
-                        const response = await apiClient.fetchImages(page, perPage, folder);
+                        const response = await apiClient.fetchImages(page, perPage, folder, currentFilter);
                         
                         if (response.success) {
                             // Add images from this page to our collection
@@ -769,7 +862,7 @@
                         // No images in this folder
                         clearCanvas();
                         updateImageCount();
-                        showNotification('No images found in this folder.', true);
+                        showNotification('No images found with current filter.', true);
                     }
                 } catch (error) {
                     console.error('Error loading images:', error);
@@ -795,1170 +888,1222 @@
                         showNotification('Image not found.', true);
                         return;
                     }
-                    
-                    // Update current image ID and index
-                    currentImageId = imageId;
-                    currentImageIndex = allImages.findIndex(img => img.id === imageId);
-                    
-                    // Update image count
-                    updateImageCount();
-                    
-                    // Load the image
-                    image = new Image();
-                    image.crossOrigin = 'anonymous';
-                    image.src = `/api/images/${imageId}/file`;
-                    
-                    image.onload = function() {
-                        console.log("Image loaded, dimensions:", image.width, "x", image.height);
-                        
-                        // Reset zoom and pan to default values
-                        zoomLevel = 1.0;
-                        panOffset = { x: 0, y: 0 };
-                        
-                        // Fit image to canvas
-                        fitImageToScreen();
-                        
-                        // Load annotations for this image
-                        loadAnnotationsForImage(imageId);
-                    };
-                    
-                    image.onerror = function() {
-                        console.error(`Error loading image ${imageId}`);
-                        clearCanvas();
-                        ctx.font = '20px Arial';
-                        ctx.fillStyle = 'black';
-                        ctx.fillText('Error loading image', 50, 50);
-                        hideLoading();
-                    };
-                } catch (error) {
-                    console.error(`Error loading image ${imageId}:`, error);
-                    showNotification('Error loading image.', true);
-                    hideLoading();
-                }
-            }
-            
-            // Function to load previous image
-            function loadPreviousImage() {
-                if (currentImageIndex > 0) {
-                    loadImage(allImages[currentImageIndex - 1].id);
-                }
-            }
-            
-            // Function to load next image
-            function loadNextImage() {
-                if (currentImageIndex < allImages.length - 1) {
-                    loadImage(allImages[currentImageIndex + 1].id);
-                }
-            }
-            
-            // Function to load annotations for an image with special handling for background annotations
-            async function loadAnnotationsForImage(imageId) {
-                try {
-                    const response = await apiClient.fetchAnnotations(imageId);
-                    
-                    if (response.success) {
-                        // Convert API annotations to local format
-                        annotations = response.annotations.map(ann => {
-                            // Calculate image dimensions for proper conversion
-                            const imgWidth = image.width;
-                            const imgHeight = image.height;
-                            
-                            // Convert normalized coordinates (0-1) to image coordinates
-                            const imgX = ann.x_min * imgWidth;
-                            const imgY = ann.y_min * imgHeight;
-                            const imgWidth2 = (ann.x_max - ann.x_min) * imgWidth;
-                            const imgHeight2 = (ann.y_max - ann.y_min) * imgHeight;
-                            
-                            return {
-                                id: ann.id,
-                                species_id: ann.species_id,
-                                box: {
-                                    x: imgX,
-                                    y: imgY,
-                                    width: imgWidth2,
-                                    height: imgHeight2
-                                },
-                                confidence: ann.confidence,
-                                is_verified: ann.is_verified,
-                                isBackground: speciesMap[ann.species_id]?.toLowerCase().includes('background')
-                            };
-                        });
-                        
-                        // Filter out full-image background annotations
-                        const hasBackgroundAnnotation = annotations.some(ann => {
-                            // Check if this is a background species and covers nearly the whole image
-                            const isWholeCoverage = 
-                                ann.isBackground && 
-                                ann.box.x < 1 && 
-                                ann.box.y < 1 && 
-                                Math.abs(ann.box.width - image.width) < 5 && 
-                                Math.abs(ann.box.height - image.height) < 5;
-                            
-                            return isWholeCoverage;
-                        });
-                        
-                        if (hasBackgroundAnnotation) {
-                            console.log("Removing full-image background annotation");
-                            // Remove background annotations that cover the whole image
-                            annotations = annotations.filter(ann => {
-                                // Keep annotations that are not background or don't cover the whole image
-                                return !ann.isBackground || 
-                                    !(ann.box.x < 1 && 
-                                      ann.box.y < 1 && 
-                                      Math.abs(ann.box.width - image.width) < 5 && 
-                                      Math.abs(ann.box.height - image.height) < 5);
-                            });
-                        }
-                        
-                        // Update the annotation list
-                        updateAnnotationList();
-                        
-                        // Redraw the canvas
-                        redraw();
-                    }
-                } catch (error) {
-                    console.error(`Error loading annotations for image ${imageId}:`, error);
-                    showNotification('Error loading annotations.', true);
-                } finally {
-                    hideLoading();
-                }
-            }
-            
-            // Function to submit annotations
-            async function submitAnnotations() {
-                if (!currentImageId) {
-                    showNotification('No image selected.', true);
-                    return;
-                }
-                
-                // Validate that there are annotations (or confirm if empty)
-                if (annotations.length === 0) {
-                    if (!confirm('No annotations drawn. Are you sure this image has no animals?')) {
-                        return;
-                    }
-                    // If confirmed, call the markNoAnimals function instead
-                    return markNoAnimals();
-                }
-                
-                showLoading();
-                try {
-                    console.log("Saving annotations for image:", currentImageId);
-                    
-                    // Convert annotations to normalized coordinates (0-1)
-                    const normalizedAnnotations = annotations.map(ann => {
-                        return {
-                            species_id: ann.species_id,
-                            x_min: ann.box.x / image.width,
-                            y_min: ann.box.y / image.height,
-                            x_max: (ann.box.x + ann.box.width) / image.width,
-                            y_max: (ann.box.y + ann.box.height) / image.height,
-                            is_verified: true
-                        };
-                    });
-                    
-                    console.log("Normalized annotations:", normalizedAnnotations);
-                    
-                    // Save annotations
-                    const response = await apiClient.saveAnnotations(currentImageId, normalizedAnnotations);
-                    
-                    if (response.success) {
-                        console.log("Save successful:", response);
-                        
-                        // Update the image's annotated status
-                        const currentImageIndex = allImages.findIndex(img => img.id === currentImageId);
-                        if (currentImageIndex >= 0) {
-                            allImages[currentImageIndex].is_annotated = true;
-                            updateProgress();
-                        }
-                        
-                        // Show success notification
-                        showNotification('Annotations saved successfully!');
-                        
-                        // Load next image if available
-                        if (currentImageIndex < allImages.length - 1) {
-                            loadImage(allImages[currentImageIndex + 1].id);
-                        } else {
-                            // We've reached the end of the images
-                            showNotification('All images annotated!');
-                        }
-                    } else {
-                        showNotification('Error: ' + (response.message || 'Unknown error'), true);
-                    }
-                } catch (error) {
-                    console.error('Error saving annotations:', error);
-                    showNotification('Error saving annotations: ' + error.message, true);
-                } finally {
-                    hideLoading();
-                }
-            }
-            
-            // Function to mark an image as having no animals
-            async function markNoAnimals() {
-                if (!currentImageId) {
-                    showNotification('No image selected.', true);
-                    return;
-                }
+                   
+                   // Update current image ID and index
+                   currentImageId = imageId;
+                   currentImageIndex = allImages.findIndex(img => img.id === imageId);
+                   
+                   // Update image count
+                   updateImageCount();
+                   
+                   // Update annotation status indicator
+                   if (annotationStatus) {
+                       if (imageInfo.is_annotated) {
+                           annotationStatus.textContent = 'Annotated';
+                           annotationStatus.className = 'status-indicator annotated';
+                       } else {
+                           annotationStatus.textContent = 'Not Annotated';
+                           annotationStatus.className = 'status-indicator not-annotated';
+                       }
+                   }
+                   
+                   // Load the image
+                   image = new Image();
+                   image.crossOrigin = 'anonymous';
+                   image.src = `/api/images/${imageId}/file`;
+                   
+                   image.onload = function() {
+                       console.log("Image loaded, dimensions:", image.width, "x", image.height);
+                       
+                       // Reset zoom and pan to default values
+                       zoomLevel = 1.0;
+                       panOffset = { x: 0, y: 0 };
+                       
+                       // Fit image to canvas
+                       fitImageToScreen();
+                       
+                       // Load annotations for this image
+                       loadAnnotationsForImage(imageId);
+                   };
+                   
+                   image.onerror = function() {
+                       console.error(`Error loading image ${imageId}`);
+                       clearCanvas();
+                       ctx.font = '20px Arial';
+                       ctx.fillStyle = 'black';
+                       ctx.fillText('Error loading image', 50, 50);
+                       hideLoading();
+                   };
+               } catch (error) {
+                   console.error(`Error loading image ${imageId}:`, error);
+                   showNotification('Error loading image.', true);
+                   hideLoading();
+               }
+           }
+           
+           // Function to load previous image
+           function loadPreviousImage() {
+               if (currentImageIndex > 0) {
+                   loadImage(allImages[currentImageIndex - 1].id);
+               }
+           }
+           
+           // Function to load next image
+           function loadNextImage() {
+               if (currentImageIndex < allImages.length - 1) {
+                   loadImage(allImages[currentImageIndex + 1].id);
+               }
+           }
+           
+           // Function to load annotations for an image with special handling for background annotations
+           async function loadAnnotationsForImage(imageId) {
+               try {
+                   const response = await apiClient.fetchAnnotations(imageId);
+                   
+                   if (response.success) {
+                       // Convert API annotations to local format
+                       annotations = response.annotations.map(ann => {
+                           // Calculate image dimensions for proper conversion
+                           const imgWidth = image.width;
+                           const imgHeight = image.height;
+                           
+                           // Convert normalized coordinates (0-1) to image coordinates
+                           const imgX = ann.x_min * imgWidth;
+                           const imgY = ann.y_min * imgHeight;
+                           const imgWidth2 = (ann.x_max - ann.x_min) * imgWidth;
+                           const imgHeight2 = (ann.y_max - ann.y_min) * imgHeight;
+                           
+                           return {
+                               id: ann.id,
+                               species_id: ann.species_id,
+                               box: {
+                                   x: imgX,
+                                   y: imgY,
+                                   width: imgWidth2,
+                                   height: imgHeight2
+                               },
+                               confidence: ann.confidence,
+                               is_verified: ann.is_verified,
+                               isBackground: speciesMap[ann.species_id]?.toLowerCase().includes('background')
+                           };
+                       });
+                       
+                       // Filter out full-image background annotations
+                       const hasBackgroundAnnotation = annotations.some(ann => {
+                           // Check if this is a background species and covers nearly the whole image
+                           const isWholeCoverage = 
+                               ann.isBackground && 
+                               ann.box.x < 1 && 
+                               ann.box.y < 1 && 
+                               Math.abs(ann.box.width - image.width) < 5 && 
+                               Math.abs(ann.box.height - image.height) < 5;
+                           
+                           return isWholeCoverage;
+                       });
+                       
+                       if (hasBackgroundAnnotation) {
+                           console.log("Removing full-image background annotation");
+                           // Remove background annotations that cover the whole image
+                           annotations = annotations.filter(ann => {
+                               // Keep annotations that are not background or don't cover the whole image
+                               return !ann.isBackground || 
+                                   !(ann.box.x < 1 && 
+                                     ann.box.y < 1 && 
+                                     Math.abs(ann.box.width - image.width) < 5 && 
+                                     Math.abs(ann.box.height - image.height) < 5);
+                           });
+                       }
+                       
+                       // Update the annotation list
+                       updateAnnotationList();
+                       
+                       // Redraw the canvas
+                       redraw();
+                   }
+               } catch (error) {
+                   console.error(`Error loading annotations for image ${imageId}:`, error);
+                   showNotification('Error loading annotations.', true);
+               } finally {
+                   hideLoading();
+               }
+           }
+           
+           // Function to submit annotations
+           async function submitAnnotations() {
+               if (!currentImageId) {
+                   showNotification('No image selected.', true);
+                   return;
+               }
+               
+               // Validate that there are annotations (or confirm if empty)
+               if (annotations.length === 0) {
+                   if (!confirm('No annotations drawn. Are you sure this image has no animals?')) {
+                       return;
+                   }
+                   // If confirmed, call the markNoAnimals function instead
+                   return markNoAnimals();
+               }
+               
+               showLoading();
+               try {
+                   console.log("Saving annotations for image:", currentImageId);
+                   
+                   // Convert annotations to normalized coordinates (0-1)
+                   const normalizedAnnotations = annotations.map(ann => {
+                       return {
+                           species_id: ann.species_id,
+                           x_min: ann.box.x / image.width,
+                           y_min: ann.box.y / image.height,
+                           x_max: (ann.box.x + ann.box.width) / image.width,
+                           y_max: (ann.box.y + ann.box.height) / image.height,
+                           is_verified: true
+                       };
+                   });
+                   
+                   console.log("Normalized annotations:", normalizedAnnotations);
+                   
+                   // Save annotations
+                   const response = await apiClient.saveAnnotations(currentImageId, normalizedAnnotations);
+                   
+                   if (response.success) {
+                       console.log("Save successful:", response);
+                       
+                       // Update the image's annotated status
+                       const foundIndex = allImages.findIndex(img => img.id === currentImageId);
+                       if (foundIndex >= 0) {
+                           allImages[foundIndex].is_annotated = true;
+                           
+                           // Update annotation status indicator
+                           if (annotationStatus) {
+                               annotationStatus.textContent = 'Annotated';
+                               annotationStatus.className = 'status-indicator annotated';
+                           }
+                           
+                           updateProgress();
+                       }
+                       
+                       // Show success notification
+                       showNotification('Annotations saved successfully!');
+                       
+                       // If filter is set to "unannotated" and we've just annotated this image,
+                       // we need to reload the image list as this one will no longer be shown
+                       if (currentFilter === 'unannotated') {
+                           await loadImages(currentFolder);
+                           if (allImages.length > 0) {
+                               loadImage(allImages[0].id);
+                           } else {
+                               clearCanvas();
+                               updateImageCount();
+                               showNotification('No more unannotated images!');
+                           }
+                       } else {
+                           // Load next image if available in current filter
+                           if (currentImageIndex < allImages.length - 1) {
+                               loadImage(allImages[currentImageIndex + 1].id);
+                           } else {
+                               // We've reached the end of the images
+                               showNotification('All images annotated!');
+                           }
+                       }
+                   } else {
+                       showNotification('Error: ' + (response.message || 'Unknown error'), true);
+                   }
+               } catch (error) {
+                   console.error('Error saving annotations:', error);
+                   showNotification('Error saving annotations: ' + error.message, true);
+               } finally {
+                   hideLoading();
+               }
+           }
+           
+           // Function to mark an image as having no animals
+           async function markNoAnimals() {
+               if (!currentImageId) {
+                   showNotification('No image selected.', true);
+                   return;
+               }
 
-                showLoading();
-                try {
-                    console.log("Marking image as having no animals:", currentImageId);
+               showLoading();
+               try {
+                   console.log("Marking image as having no animals:", currentImageId);
 
-                    // Clear any existing annotations
-                    annotations = [];
-                    selectedAnnotation = null;
-                    updateAnnotationList();
+                   // Clear any existing annotations
+                   annotations = [];
+                   selectedAnnotation = null;
+                   updateAnnotationList();
 
-                    // Get the Background species ID (typically ID 28 based on your data)
-                    let backgroundSpeciesId = null;
+                   // Get the Background species ID (typically ID 28 based on your data)
+                   let backgroundSpeciesId = null;
 
-                    // Find the Background species in the species list
-                    for (const speciesItem of document.querySelectorAll('.species-item')) {
-                        if (speciesItem.textContent.includes('Background')) {
-                            backgroundSpeciesId = parseInt(speciesItem.dataset.id);
-                            break;
-                        }
-                    }
+                   // Find the Background species in the species list
+                   for (const speciesItem of document.querySelectorAll('.species-item')) {
+                       if (speciesItem.textContent.includes('Background')) {
+                           backgroundSpeciesId = parseInt(speciesItem.dataset.id);
+                           break;
+                       }
+                   }
 
-                    if (!backgroundSpeciesId) {
-                        console.warn("Background species not found, using first species");
-                        backgroundSpeciesId = parseInt(document.querySelector('.species-item').dataset.id);
-                    }
+                   if (!backgroundSpeciesId) {
+                       console.warn("Background species not found, using first species");
+                       backgroundSpeciesId = parseInt(document.querySelector('.species-item').dataset.id);
+                   }
 
-                    console.log("Using species ID for 'No Animals':", backgroundSpeciesId);
+                   console.log("Using species ID for 'No Animals':", backgroundSpeciesId);
 
-                    // Create a single "Background" annotation covering the full image
-                    // This is better than having no annotations for ML training
-                    const fullImageAnnotation = [{
-                        species_id: backgroundSpeciesId,
-                        x_min: 0,
-                        y_min: 0,
-                        x_max: 1, // Full width
-                        y_max: 1, // Full height
-                        is_verified: true
-                    }];
+                   // Create a single "Background" annotation covering the full image
+                   // This is better than having no annotations for ML training
+                   const fullImageAnnotation = [{
+                       species_id: backgroundSpeciesId,
+                       x_min: 0,
+                       y_min: 0,
+                       x_max: 1, // Full width
+                       y_max: 1, // Full height
+                       is_verified: true
+                   }];
 
-                    // Save this annotation
-                    const response = await apiClient.saveAnnotations(currentImageId, fullImageAnnotation);
+                   // Save this annotation
+                   const response = await apiClient.saveAnnotations(currentImageId, fullImageAnnotation);
 
-                    if (response.success) {
-                        // Update the image's annotated status
-                        const currentImageIndex = allImages.findIndex(img => img.id === currentImageId);
-                        if (currentImageIndex >= 0) {
-                            allImages[currentImageIndex].is_annotated = true;
-                            updateProgress();
-                        }
+                   if (response.success) {
+                       // Update the image's annotated status
+                       const foundIndex = allImages.findIndex(img => img.id === currentImageId);
+                       if (foundIndex >= 0) {
+                           allImages[foundIndex].is_annotated = true;
+                           
+                           // Update annotation status indicator
+                           if (annotationStatus) {
+                               annotationStatus.textContent = 'Annotated';
+                               annotationStatus.className = 'status-indicator annotated';
+                           }
+                           
+                           updateProgress();
+                       }
 
-                        // Show success notification
-                        showNotification('Image marked as having no animals.');
+                       // Show success notification
+                       showNotification('Image marked as having no animals.');
+                       
+                       // If filter is set to "unannotated" and we've just annotated this image,
+                       // we need to reload the image list as this one will no longer be shown
+                       if (currentFilter === 'unannotated') {
+                           await loadImages(currentFolder);
+                           if (allImages.length > 0) {
+                               loadImage(allImages[0].id);
+                           } else {
+                               clearCanvas();
+                               updateImageCount();
+                               showNotification('No more unannotated images!');
+                           }
+                       } else {
+                           // Load next image if available
+                           if (currentImageIndex < allImages.length - 1) {
+                               loadImage(allImages[currentImageIndex + 1].id);
+                           } else {
+                               // We've reached the end of the images
+                               showNotification('All images annotated!');
+                           }
+                       }
+                   } else {
+                       showNotification('Error: ' + response.message, true);
+                   }
+               } catch (error) {
+                   console.error('Error marking image as having no animals:', error);
+                   showNotification('Error marking image as having no animals.', true);
+               } finally {
+                   hideLoading();
+               }
+           }
+           
+           // Function to update the image count
+           function updateImageCount() {
+               const imageCountElement = document.getElementById('image-count');
+               if (allImages.length > 0) {
+                   imageCountElement.textContent = `Image ${currentImageIndex + 1} of ${allImages.length}`;
+               } else {
+                   imageCountElement.textContent = 'No images';
+               }
+           }
+           
+           // Function to update the progress
+           function updateProgress() {
+               // Count annotated images
+               let count = 0;
+               for (const img of allImages) {
+                   if (img.is_annotated) {
+                       count++;
+                   }
+               }
+               
+               annotatedImagesCount = count;
+               
+               const percentage = allImages.length > 0 
+                   ? Math.round((annotatedImagesCount / allImages.length) * 100) 
+                   : 0;
+               
+               console.log(`Progress updated: ${count}/${allImages.length} (${percentage}%)`);
+               progressText.textContent = `${percentage}% Complete`;
+           }
+           
+           // Function to select a species
+           function selectSpecies(speciesId) {
+               currentSpecies = speciesId;
+               
+               // Update UI to reflect selected species
+               document.querySelectorAll('.species-item').forEach(item => {
+                   item.classList.remove('selected');
+               });
 
-                        // Load next image if available
-                        if (currentImageIndex < allImages.length - 1) {
-                            loadImage(allImages[currentImageIndex + 1].id);
-                        } else {
-                            // We've reached the end of the images
-                            showNotification('All images annotated!');
-                        }
-                    } else {
-                        showNotification('Error: ' + response.message, true);
-                    }
-                } catch (error) {
-                    console.error('Error marking image as having no animals:', error);
-                    showNotification('Error marking image as having no animals.', true);
-                } finally {
-                    hideLoading();
-                }
-            }
-            
-            // Function to update the image count
-            function updateImageCount() {
-                const imageCountElement = document.getElementById('image-count');
-                if (allImages.length > 0) {
-                    imageCountElement.textContent = `Image ${currentImageIndex + 1} of ${allImages.length}`;
-                } else {
-                    imageCountElement.textContent = 'No images';
-                }
-            }
-            
-            // Function to update the progress
-            function updateProgress() {
-                // Count annotated images
-                let count = 0;
-                for (const img of allImages) {
-                    if (img.is_annotated) {
-                        count++;
-                    }
-                }
-                
-                annotatedImagesCount = count;
-                
-                const percentage = allImages.length > 0 
-                    ? Math.round((annotatedImagesCount / allImages.length) * 100) 
-                    : 0;
-                
-                console.log(`Progress updated: ${count}/${allImages.length} (${percentage}%)`);
-                progressText.textContent = `${percentage}% Complete`;
-            }
-            
-            // Function to select a species
-            function selectSpecies(speciesId) {
-                currentSpecies = speciesId;
-                
-                // Update UI to reflect selected species
-                document.querySelectorAll('.species-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
+               document.querySelector(`.species-item[data-id="${speciesId}"]`)?.classList.add('selected');
 
-                document.querySelector(`.species-item[data-id="${speciesId}"]`)?.classList.add('selected');
+               // Update selected annotation if any
+               if (selectedAnnotation) {
+                   selectedAnnotation.species_id = speciesId;
+                   updateAnnotationList();
+                   redraw();
+               }
+           }
 
-                // Update selected annotation if any
-                if (selectedAnnotation) {
-                    selectedAnnotation.species_id = speciesId;
-                    updateAnnotationList();
-                    redraw();
-                }
-            }
+           // Function to filter species based on search
+           function filterSpecies() {
+               const searchTerm = speciesSearch.value.toLowerCase();
+               const speciesItems = document.querySelectorAll('.species-item');
+               
+               speciesItems.forEach(item => {
+                   const speciesName = item.querySelector('span').textContent.toLowerCase();
+                   if (speciesName.includes(searchTerm)) {
+                       item.style.display = 'flex';
+                   } else {
+                       item.style.display = 'none';
+                   }
+               });
+           }
 
-            // Function to filter species based on search
-            function filterSpecies() {
-                const searchTerm = speciesSearch.value.toLowerCase();
-                const speciesItems = document.querySelectorAll('.species-item');
-                
-                speciesItems.forEach(item => {
-                    const speciesName = item.querySelector('span').textContent.toLowerCase();
-                    if (speciesName.includes(searchTerm)) {
-                        item.style.display = 'flex';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            }
+           // Function to delete selected annotation
+           function deleteSelectedAnnotation() {
+               if (selectedAnnotation) {
+                   annotations = annotations.filter(a => a !== selectedAnnotation);
+                   selectedAnnotation = null;
+                   updateAnnotationList();
+                   redraw();
+               }
+           }
 
-            // Function to delete selected annotation
-            function deleteSelectedAnnotation() {
-                if (selectedAnnotation) {
-                    annotations = annotations.filter(a => a !== selectedAnnotation);
-                    selectedAnnotation = null;
-                    updateAnnotationList();
-                    redraw();
-                }
-            }
+           // Improved zoom functions with better control
+           function zoomIn() {
+               // Save current zoom level for logging
+               const previousZoom = zoomLevel;
+               
+               // Increase zoom level with a reasonable step
+               zoomLevel = Math.min(zoomLevel * 1.2, 10.0);
+               
+               console.log(`Zoom in: ${previousZoom.toFixed(2)} → ${zoomLevel.toFixed(2)}`);
+               redraw();
+           }
 
-            // Improved zoom functions with better control
-            function zoomIn() {
-                // Save current zoom level for logging
-                const previousZoom = zoomLevel;
-                
-                // Increase zoom level with a reasonable step
-                zoomLevel = Math.min(zoomLevel * 1.2, 10.0);
-                
-                console.log(`Zoom in: ${previousZoom.toFixed(2)} → ${zoomLevel.toFixed(2)}`);
-                redraw();
-            }
+           function zoomOut() {
+               // Save current zoom level for logging
+               const previousZoom = zoomLevel;
+               
+               // Decrease zoom level with no lower limit (can go very small)
+               zoomLevel = zoomLevel / 1.2;
+               
+               // Make sure we don't go to zero or negative zoom
+               if (zoomLevel < 0.05) {
+                   zoomLevel = 0.05;
+               }
+               
+               console.log(`Zoom out: ${previousZoom.toFixed(2)} → ${zoomLevel.toFixed(2)}`);
+               redraw();
+           }
 
-            function zoomOut() {
-                // Save current zoom level for logging
-                const previousZoom = zoomLevel;
-                
-                // Decrease zoom level with no lower limit (can go very small)
-                zoomLevel = zoomLevel / 1.2;
-                
-                // Make sure we don't go to zero or negative zoom
-                if (zoomLevel < 0.05) {
-                    zoomLevel = 0.05;
-                }
-                
-                console.log(`Zoom out: ${previousZoom.toFixed(2)} → ${zoomLevel.toFixed(2)}`);
-                redraw();
-            }
+           // Enhanced function to fit image to screen properly
+           function fitImageToScreen() {
+               if (!image.complete) return;
+               
+               // Reset zoom and pan
+               zoomLevel = 1.0;
+               panOffset = { x: 0, y: 0 };
+               
+               // Calculate the aspect ratio to fit the image properly
+               const containerWidth = canvas.width;
+               const containerHeight = canvas.height;
+               
+               const imageAspect = image.width / image.height;
+               const containerAspect = containerWidth / containerHeight;
+               
+               // Determine the scale factor to fit the image completely within the canvas
+               let scaleFactor;
+               if (imageAspect > containerAspect) {
+                   // Image is wider than container (fit by width)
+                   scaleFactor = containerWidth / image.width;
+               } else {
+                   // Image is taller than container (fit by height)
+                   scaleFactor = containerHeight / image.height;
+               }
+               
+               // Apply a slightly smaller scale to ensure there's a margin
+               zoomLevel = scaleFactor * 0.95;
+               
+               redraw();
+           }
 
-            // Enhanced function to fit image to screen properly
-            function fitImageToScreen() {
-                if (!image.complete) return;
-                
-                // Reset zoom and pan
-                zoomLevel = 1.0;
-                panOffset = { x: 0, y: 0 };
-                
-                // Calculate the aspect ratio to fit the image properly
-                const containerWidth = canvas.width;
-                const containerHeight = canvas.height;
-                
-                const imageAspect = image.width / image.height;
-                const containerAspect = containerWidth / containerHeight;
-                
-                // Determine the scale factor to fit the image completely within the canvas
-                let scaleFactor;
-                if (imageAspect > containerAspect) {
-                    // Image is wider than container (fit by width)
-                    scaleFactor = containerWidth / image.width;
-                } else {
-                    // Image is taller than container (fit by height)
-                    scaleFactor = containerHeight / image.height;
-                }
-                
-                // Apply a slightly smaller scale to ensure there's a margin
-                zoomLevel = scaleFactor * 0.95;
-                
-                redraw();
-            }
+           // Function to resize canvas
+           function resizeCanvas() {
+               const container = canvas.parentElement;
+               canvas.width = container.clientWidth;
+               canvas.height = container.clientHeight - document.querySelector('.toolbar').offsetHeight;
+               redraw();
+           }
 
-            // Function to resize canvas
-            function resizeCanvas() {
-                const container = canvas.parentElement;
-                canvas.width = container.clientWidth;
-                canvas.height = container.clientHeight - document.querySelector('.toolbar').offsetHeight;
-                redraw();
-            }
+           // Function to clear canvas
+           function clearCanvas() {
+               ctx.clearRect(0, 0, canvas.width, canvas.height);
+               annotations = [];
+               selectedAnnotation = null;
+               updateAnnotationList();
+           }
 
-            // Function to clear canvas
-            function clearCanvas() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                annotations = [];
-                selectedAnnotation = null;
-                updateAnnotationList();
-            }
+           // Function to set up canvas event listeners
+           function setupCanvasEventListeners() {
+               // Remove any existing event listeners to prevent duplicates
+               canvas.removeEventListener('mousedown', handleMouseDown);
+               canvas.removeEventListener('mousemove', handleMouseMove);
+               canvas.removeEventListener('mouseup', handleMouseUp);
+               canvas.removeEventListener('mouseleave', handleMouseUp);
+               canvas.removeEventListener('mousemove', updateCursor);
+               canvas.removeEventListener('wheel', handleMouseWheel);
+               
+               // Add event listeners
+               canvas.addEventListener('mousedown', handleMouseDown);
+               canvas.addEventListener('mousemove', handleMouseMove);
+               canvas.addEventListener('mouseup', handleMouseUp);
+               canvas.addEventListener('mouseleave', handleMouseUp);
+               canvas.addEventListener('mousemove', updateCursor);
+               canvas.addEventListener('wheel', handleMouseWheel);
+               
+               console.log("Canvas event listeners set up");
+           }
+           
+           // Mouse wheel handler for zooming
+           function handleMouseWheel(e) {
+               if (e.deltaY < 0) {
+                   // Wheel up - zoom in
+                   zoomIn();
+               } else {
+                   // Wheel down - zoom out
+                   zoomOut();
+               }
+               e.preventDefault();
+           }
 
-            // Function to set up canvas event listeners
-            function setupCanvasEventListeners() {
-                // Remove any existing event listeners to prevent duplicates
-                canvas.removeEventListener('mousedown', handleMouseDown);
-                canvas.removeEventListener('mousemove', handleMouseMove);
-                canvas.removeEventListener('mouseup', handleMouseUp);
-                canvas.removeEventListener('mouseleave', handleMouseUp);
-                canvas.removeEventListener('mousemove', updateCursor);
-                canvas.removeEventListener('wheel', handleMouseWheel);
-                
-                // Add event listeners
-                canvas.addEventListener('mousedown', handleMouseDown);
-                canvas.addEventListener('mousemove', handleMouseMove);
-                canvas.addEventListener('mouseup', handleMouseUp);
-                canvas.addEventListener('mouseleave', handleMouseUp);
-                canvas.addEventListener('mousemove', updateCursor);
-                canvas.addEventListener('wheel', handleMouseWheel);
-                
-                console.log("Canvas event listeners set up");
-            }
-            
-            // Mouse wheel handler for zooming
-            function handleMouseWheel(e) {
-                if (e.deltaY < 0) {
-                    // Wheel up - zoom in
-                    zoomIn();
-                } else {
-                    // Wheel down - zoom out
-                    zoomOut();
-                }
-                e.preventDefault();
-            }
+           // Function to set up keyboard shortcuts
+           function setupKeyboardShortcuts() {
+               document.addEventListener('keydown', function(e) {
+                   // Tool shortcuts
+                   if (e.key === 'b') {
+                       setActiveTool('box');
+                   } else if (e.key === 's') {
+                       setActiveTool('select');
+                   } else if (e.key === 'Delete') {
+                       deleteSelectedAnnotation();
+                   } else if (e.key === 'f') {
+                       fitImageToScreen();
+                   } else if (e.key === '=') {
+                       zoomIn();
+                   } else if (e.key === '-') {
+                       zoomOut();
+                   }
+                   
+                   // Species shortcuts (1-9)
+                   const num = parseInt(e.key);
+                   if (!isNaN(num) && num >= 1 && num <= 9) {
+                       const speciesItems = document.querySelectorAll('.species-item');
+                       if (speciesItems[num - 1]) {
+                           speciesItems[num - 1].click();
+                       }
+                   }
+                   
+                   // Navigation
+                   if (e.key === 'ArrowRight') {
+                       loadNextImage();
+                   } else if (e.key === 'ArrowLeft') {
+                       loadPreviousImage();
+                   }
+               });
+           }
 
-            // Function to set up keyboard shortcuts
-            function setupKeyboardShortcuts() {
-                document.addEventListener('keydown', function(e) {
-                    // Tool shortcuts
-                    if (e.key === 'b') {
-                        setActiveTool('box');
-                    } else if (e.key === 's') {
-                        setActiveTool('select');
-                    } else if (e.key === 'Delete') {
-                        deleteSelectedAnnotation();
-                    } else if (e.key === 'f') {
-                        fitImageToScreen();
-                    } else if (e.key === '=') {
-                        zoomIn();
-                    } else if (e.key === '-') {
-                        zoomOut();
-                    }
-                    
-                    // Species shortcuts (1-9)
-                    const num = parseInt(e.key);
-                    if (!isNaN(num) && num >= 1 && num <= 9) {
-                        const speciesItems = document.querySelectorAll('.species-item');
-                        if (speciesItems[num - 1]) {
-                            speciesItems[num - 1].click();
-                        }
-                    }
-                    
-                    // Navigation
-                    if (e.key === 'ArrowRight') {
-                        loadNextImage();
-                    } else if (e.key === 'ArrowLeft') {
-                        loadPreviousImage();
-                    }
-                });
-            }
+           // Smart cursor update function - works with all annotations, not just the selected one
+           function updateCursor(e) {
+               const rect = canvas.getBoundingClientRect();
+               const scaleX = canvas.width / rect.width;
+               const scaleY = canvas.height / rect.height;
+               
+               const x = (e.clientX - rect.left) * scaleX;
+               const y = (e.clientY - rect.top) * scaleY;
+               
+               // Calculate image dimensions and position with zoom
+               const imgWidth = image.width * zoomLevel;
+               const imgHeight = image.height * zoomLevel;
+               const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
+               const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
+               
+               // Check if we're hovering over any annotation
+               let cursorSet = false;
+               
+               // Create a list of annotations to check, prioritizing the selected one
+               let annotationsToCheck = [...annotations];
+               if (selectedAnnotation) {
+                   annotationsToCheck = annotationsToCheck.filter(a => a !== selectedAnnotation);
+                   annotationsToCheck.push(selectedAnnotation);
+               }
+               
+               // Check all annotations in reverse order (to prioritize ones on top)
+               for (let i = annotationsToCheck.length - 1; i >= 0; i--) {
+                   const annotation = annotationsToCheck[i];
+                   const box = annotation.box;
+                   
+                   // Transform box coordinates
+                   const scaledBox = {
+                       x: box.x * zoomLevel + imgX,
+                       y: box.y * zoomLevel + imgY,
+                       width: box.width * zoomLevel,
+                       height: box.height * zoomLevel
+                   };
+                   
+                   // Check if cursor is on any part of this box
+                   
+                   // Top-left corner
+                   if (isNearPoint(x, y, scaledBox.x, scaledBox.y)) {
+                       canvas.style.cursor = 'nwse-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Top-right corner
+                   else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y)) {
+                       canvas.style.cursor = 'nesw-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Bottom-left corner
+                   else if (isNearPoint(x, y, scaledBox.x, scaledBox.y + scaledBox.height)) {
+                       canvas.style.cursor = 'nesw-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Bottom-right corner
+                   else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                       canvas.style.cursor = 'nwse-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Top edge
+                   else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y)) {
+                       canvas.style.cursor = 'ns-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Right edge
+                   else if (isNearEdge(x, y, scaledBox.x + scaledBox.width, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                       canvas.style.cursor = 'ew-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Bottom edge
+                   else if (isNearEdge(x, y, scaledBox.x, scaledBox.y + scaledBox.height, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                       canvas.style.cursor = 'ns-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // Left edge
+                   else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x, scaledBox.y + scaledBox.height)) {
+                       canvas.style.cursor = 'ew-resize';
+                       cursorSet = true;
+                       break;
+                   }
+                   // If inside the box but not on an edge/corner, show move cursor
+                   else if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
+                           y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
+                       canvas.style.cursor = 'move';
+                       cursorSet = true;
+                       break;
+                   }
+               }
+               
+               // If not hovering over any annotation, use crosshair cursor for drawing
+               if (!cursorSet) {
+                   canvas.style.cursor = 'crosshair';
+               }
+           }
 
-            // Smart cursor update function - works with all annotations, not just the selected one
-            function updateCursor(e) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                // Calculate image dimensions and position with zoom
-                const imgWidth = image.width * zoomLevel;
-                const imgHeight = image.height * zoomLevel;
-                const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
-                const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
-                
-                // Check if we're hovering over any annotation
-                let cursorSet = false;
-                
-                // Create a list of annotations to check, prioritizing the selected one
-                let annotationsToCheck = [...annotations];
-                if (selectedAnnotation) {
-                    annotationsToCheck = annotationsToCheck.filter(a => a !== selectedAnnotation);
-                    annotationsToCheck.push(selectedAnnotation);
-                }
-                
-                // Check all annotations in reverse order (to prioritize ones on top)
-                for (let i = annotationsToCheck.length - 1; i >= 0; i--) {
-                    const annotation = annotationsToCheck[i];
-                    const box = annotation.box;
-                    
-                    // Transform box coordinates
-                    const scaledBox = {
-                        x: box.x * zoomLevel + imgX,
-                        y: box.y * zoomLevel + imgY,
-                        width: box.width * zoomLevel,
-                        height: box.height * zoomLevel
-                    };
-                    
-                    // Check if cursor is on any part of this box
-                    
-                    // Top-left corner
-                    if (isNearPoint(x, y, scaledBox.x, scaledBox.y)) {
-                        canvas.style.cursor = 'nwse-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Top-right corner
-                    else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y)) {
-                        canvas.style.cursor = 'nesw-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Bottom-left corner
-                    else if (isNearPoint(x, y, scaledBox.x, scaledBox.y + scaledBox.height)) {
-                        canvas.style.cursor = 'nesw-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Bottom-right corner
-                    else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                        canvas.style.cursor = 'nwse-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Top edge
-                    else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y)) {
-                        canvas.style.cursor = 'ns-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Right edge
-                    else if (isNearEdge(x, y, scaledBox.x + scaledBox.width, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                        canvas.style.cursor = 'ew-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Bottom edge
-                    else if (isNearEdge(x, y, scaledBox.x, scaledBox.y + scaledBox.height, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                        canvas.style.cursor = 'ns-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // Left edge
-                    else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x, scaledBox.y + scaledBox.height)) {
-                        canvas.style.cursor = 'ew-resize';
-                        cursorSet = true;
-                        break;
-                    }
-                    // If inside the box but not on an edge/corner, show move cursor
-                    else if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
-                            y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
-                        canvas.style.cursor = 'move';
-                        cursorSet = true;
-                        break;
-                    }
-                }
-                
-                // If not hovering over any annotation, use crosshair cursor for drawing
-                if (!cursorSet) {
-                    canvas.style.cursor = 'crosshair';
-                }
-            }
+           // Improved smart mouse handler for both drawing and manipulating boxes
+           function handleMouseDown(e) {
+               const rect = canvas.getBoundingClientRect();
+               const scaleX = canvas.width / rect.width;
+               const scaleY = canvas.height / rect.height;
+               
+               const x = (e.clientX - rect.left) * scaleX;
+               const y = (e.clientY - rect.top) * scaleY;
+               
+               // Smart tool behavior (combines box and select functionality)
+               // First check if we're hovering over an existing annotation
+               let boxFound = false;
+               
+               // Check for interactions with existing boxes
+               if (annotations.length > 0) {
+                   // Calculate image dimensions and position with zoom
+                   const imgWidth = image.width * zoomLevel;
+                   const imgHeight = image.height * zoomLevel;
+                   const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
+                   const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
+                   
+                   // Check all annotations for potential interaction, starting with the selected one
+                   let annotationsToCheck = [...annotations];
+                   
+                   // Move the selected annotation to the end so it's checked first
+                   if (selectedAnnotation) {
+                       annotationsToCheck = annotationsToCheck.filter(a => a !== selectedAnnotation);
+                       annotationsToCheck.push(selectedAnnotation);
+                   }
+                   
+                   // Check each annotation in reverse order (to prioritize the top ones)
+                   for (let i = annotationsToCheck.length - 1; i >= 0; i--) {
+                       const annotation = annotationsToCheck[i];
+                       const box = annotation.box;
+                       
+                       // Transform box coordinates
+                       const scaledBox = {
+                           x: box.x * zoomLevel + imgX,
+                           y: box.y * zoomLevel + imgY,
+                           width: box.width * zoomLevel,
+                           height: box.height * zoomLevel
+                       };
+                       
+                       // Check if we're on a resize handle of this box
+                       let onBox = false;
+                       
+                       // Store original box for reference during drag
+                       originalBox = { ...box };
+                       dragStartPoint = { x, y };
+                       selectedAnnotation = annotation;
+                       
+                       // Check for resize handles
+                       // Top-left corner
+                       if (isNearPoint(x, y, scaledBox.x, scaledBox.y)) {
+                           dragMode = 'resize-tl';
+                           onBox = true;
+                       }
+                       // Top-right corner
+                       else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y)) {
+                           dragMode = 'resize-tr';
+                           onBox = true;
+                       }
+                       // Bottom-left corner
+                       else if (isNearPoint(x, y, scaledBox.x, scaledBox.y + scaledBox.height)) {
+                           dragMode = 'resize-bl';
+                           onBox = true;
+                       }
+                       // Bottom-right corner
+                       else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                           dragMode = 'resize-br';
+                           onBox = true;
+                       }
+                       // Top edge
+                       else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y)) {
+                           dragMode = 'resize-t';
+                           onBox = true;
+                       }
+                       // Right edge
+                       else if (isNearEdge(x, y, scaledBox.x + scaledBox.width, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                           dragMode = 'resize-r';
+                           onBox = true;
+                       }
+                       // Bottom edge
+                       else if (isNearEdge(x, y, scaledBox.x, scaledBox.y + scaledBox.height, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
+                           dragMode = 'resize-b';
+                           onBox = true;
+                       }
+                       // Left edge
+                       else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x, scaledBox.y + scaledBox.height)) {
+                           dragMode = 'resize-l';
+                           onBox = true;
+                       }
+                       // If inside the box but not on an edge/corner, move the whole box
+                       else if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
+                               y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
+                           dragMode = 'move';
+                           onBox = true;
+                       }
+                       
+                       if (onBox) {
+                           boxFound = true;
+                           updateAnnotationList(); // Update the annotation list to show the selected annotation
+                           break;
+                       }
+                   }
+               }
+               
+               // If no existing box was clicked, start drawing a new box
+               if (!boxFound) {
+                   // Reset selection if we're starting a new box
+                   selectedAnnotation = null;
+                   updateAnnotationList();
+                   
+                   // Start drawing a new box
+                   isDrawing = true;
+                   startPoint = { x, y };
+                   currentBox = { x, y, width: 0, height: 0 };
+               }
+               
+               redraw();
+           }
 
-            // Improved smart mouse handler for both drawing and manipulating boxes
-            function handleMouseDown(e) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                // Smart tool behavior (combines box and select functionality)
-                // First check if we're hovering over an existing annotation
-                let boxFound = false;
-                
-                // Check for interactions with existing boxes
-                if (annotations.length > 0) {
-                    // Calculate image dimensions and position with zoom
-                    const imgWidth = image.width * zoomLevel;
-                    const imgHeight = image.height * zoomLevel;
-                    const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
-                    const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
-                    
-                    // Check all annotations for potential interaction, starting with the selected one
-                    let annotationsToCheck = [...annotations];
-                    
-                    // Move the selected annotation to the end so it's checked first
-                    if (selectedAnnotation) {
-                        annotationsToCheck = annotationsToCheck.filter(a => a !== selectedAnnotation);
-                        annotationsToCheck.push(selectedAnnotation);
-                    }
-                    
-                    // Check each annotation in reverse order (to prioritize the top ones)
-                    for (let i = annotationsToCheck.length - 1; i >= 0; i--) {
-                        const annotation = annotationsToCheck[i];
-                        const box = annotation.box;
-                        
-                        // Transform box coordinates
-                        const scaledBox = {
-                            x: box.x * zoomLevel + imgX,
-                            y: box.y * zoomLevel + imgY,
-                            width: box.width * zoomLevel,
-                            height: box.height * zoomLevel
-                        };
-                        
-                        // Check if we're on a resize handle of this box
-                        let onBox = false;
-                        
-                        // Store original box for reference during drag
-                        originalBox = { ...box };
-                        dragStartPoint = { x, y };
-                        selectedAnnotation = annotation;
-                        
-                        // Check for resize handles
-                        // Top-left corner
-                        if (isNearPoint(x, y, scaledBox.x, scaledBox.y)) {
-                            dragMode = 'resize-tl';
-                            onBox = true;
-                        }
-                        // Top-right corner
-                        else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y)) {
-                            dragMode = 'resize-tr';
-                            onBox = true;
-                        }
-                        // Bottom-left corner
-                        else if (isNearPoint(x, y, scaledBox.x, scaledBox.y + scaledBox.height)) {
-                            dragMode = 'resize-bl';
-                            onBox = true;
-                        }
-                        // Bottom-right corner
-                        else if (isNearPoint(x, y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                            dragMode = 'resize-br';
-                            onBox = true;
-                        }
-                        // Top edge
-                        else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y)) {
-                            dragMode = 'resize-t';
-                            onBox = true;
-                        }
-                        // Right edge
-                        else if (isNearEdge(x, y, scaledBox.x + scaledBox.width, scaledBox.y, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                            dragMode = 'resize-r';
-                            onBox = true;
-                        }
-                        // Bottom edge
-                        else if (isNearEdge(x, y, scaledBox.x, scaledBox.y + scaledBox.height, scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height)) {
-                            dragMode = 'resize-b';
-                            onBox = true;
-                        }
-                        // Left edge
-                        else if (isNearEdge(x, y, scaledBox.x, scaledBox.y, scaledBox.x, scaledBox.y + scaledBox.height)) {
-                            dragMode = 'resize-l';
-                            onBox = true;
-                        }
-                        // If inside the box but not on an edge/corner, move the whole box
-                        else if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
-                                y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
-                            dragMode = 'move';
-                            onBox = true;
-                        }
-                        
-                        if (onBox) {
-                            boxFound = true;
-                            updateAnnotationList(); // Update the annotation list to show the selected annotation
-                            break;
-                        }
-                    }
-                }
-                
-                // If no existing box was clicked, start drawing a new box
-                if (!boxFound) {
-                    // Reset selection if we're starting a new box
-                    selectedAnnotation = null;
-                    updateAnnotationList();
-                    
-                    // Start drawing a new box
-                    isDrawing = true;
-                    startPoint = { x, y };
-                    currentBox = { x, y, width: 0, height: 0 };
-                }
-                
-                redraw();
-            }
+           function handleMouseMove(e) {
+               // Update cursor appearance regardless of active operation
+               updateCursor(e);
+               
+               const rect = canvas.getBoundingClientRect();
+               const scaleX = canvas.width / rect.width;
+               const scaleY = canvas.height / rect.height;
+               
+               const x = (e.clientX - rect.left) * scaleX;
+               const y = (e.clientY - rect.top) * scaleY;
+               
+               // Drawing a new box
+               if (isDrawing) {
+                   currentBox = {
+                       x: Math.min(startPoint.x, x),
+                       y: Math.min(startPoint.y, y),
+                       width: Math.abs(x - startPoint.x),
+                       height: Math.abs(y - startPoint.y)
+                   };
+                   redraw();
+               }
+               // Resizing or moving an existing box
+               else if (dragMode && selectedAnnotation && dragStartPoint)
+               {
+                   const deltaX = (x - dragStartPoint.x) / zoomLevel;
+                   const deltaY = (y - dragStartPoint.y) / zoomLevel;
+                   
+                   switch (dragMode) {
+                       case 'move':
+                           selectedAnnotation.box.x = originalBox.x + deltaX;
+                           selectedAnnotation.box.y = originalBox.y + deltaY;
+                           break;
+                       case 'resize-tl':
+                           selectedAnnotation.box.x = originalBox.x + deltaX;
+                           selectedAnnotation.box.y = originalBox.y + deltaY;
+                           selectedAnnotation.box.width = originalBox.width - deltaX;
+                           selectedAnnotation.box.height = originalBox.height - deltaY;
+                           break;
+                       case 'resize-tr':
+                           selectedAnnotation.box.y = originalBox.y + deltaY;
+                           selectedAnnotation.box.width = originalBox.width + deltaX;
+                           selectedAnnotation.box.height = originalBox.height - deltaY;
+                           break;
+                       case 'resize-bl':
+                           selectedAnnotation.box.x = originalBox.x + deltaX;
+                           selectedAnnotation.box.width = originalBox.width - deltaX;
+                           selectedAnnotation.box.height = originalBox.height + deltaY;
+                           break;
+                       case 'resize-br':
+                           selectedAnnotation.box.width = originalBox.width + deltaX;
+                           selectedAnnotation.box.height = originalBox.height + deltaY;
+                           break;
+                       case 'resize-t':
+                           selectedAnnotation.box.y = originalBox.y + deltaY;
+                           selectedAnnotation.box.height = originalBox.height - deltaY;
+                           break;
+                       case 'resize-r':
+                           selectedAnnotation.box.width = originalBox.width + deltaX;
+                           break;
+                       case 'resize-b':
+                           selectedAnnotation.box.height = originalBox.height + deltaY;
+                           break;
+                       case 'resize-l':
+                           selectedAnnotation.box.x = originalBox.x + deltaX;
+                           selectedAnnotation.box.width = originalBox.width - deltaX;
+                           break;
+                   }
+                   
+                   // Ensure width and height are positive
+                   if (selectedAnnotation.box.width < 0) {
+                       selectedAnnotation.box.x += selectedAnnotation.box.width;
+                       selectedAnnotation.box.width = Math.abs(selectedAnnotation.box.width);
+                   }
+                   
+                   if (selectedAnnotation.box.height < 0) {
+                       selectedAnnotation.box.y += selectedAnnotation.box.height;
+                       selectedAnnotation.box.height = Math.abs(selectedAnnotation.box.height);
+                   }
+                   
+                   redraw();
+               }
+           }
 
-            function handleMouseMove(e) {
-                // Update cursor appearance regardless of active operation
-                updateCursor(e);
-                
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                // Drawing a new box
-                if (isDrawing) {
-                    currentBox = {
-                        x: Math.min(startPoint.x, x),
-                        y: Math.min(startPoint.y, y),
-                        width: Math.abs(x - startPoint.x),
-                        height: Math.abs(y - startPoint.y)
-                    };
-                    redraw();
-                }
-                // Resizing or moving an existing box
-                else if (dragMode && selectedAnnotation && dragStartPoint) {
-                    const deltaX = (x - dragStartPoint.x) / zoomLevel;
-                    const deltaY = (y - dragStartPoint.y) / zoomLevel;
-                    
-                    switch (dragMode) {
-                        case 'move':
-                            selectedAnnotation.box.x = originalBox.x + deltaX;
-                            selectedAnnotation.box.y = originalBox.y + deltaY;
-                            break;
-                        case 'resize-tl':
-                            selectedAnnotation.box.x = originalBox.x + deltaX;
-                            selectedAnnotation.box.y = originalBox.y + deltaY;
-                            selectedAnnotation.box.width = originalBox.width - deltaX;
-                            selectedAnnotation.box.height = originalBox.height - deltaY;
-                            break;
-                        case 'resize-tr':
-                            selectedAnnotation.box.y = originalBox.y + deltaY;
-                            selectedAnnotation.box.width = originalBox.width + deltaX;
-                            selectedAnnotation.box.height = originalBox.height - deltaY;
-                            break;
-                        case 'resize-bl':
-                            selectedAnnotation.box.x = originalBox.x + deltaX;
-                            selectedAnnotation.box.width = originalBox.width - deltaX;
-                            selectedAnnotation.box.height = originalBox.height + deltaY;
-                            break;
-                        case 'resize-br':
-                            selectedAnnotation.box.width = originalBox.width + deltaX;
-                            selectedAnnotation.box.height = originalBox.height + deltaY;
-                            break;
-                        case 'resize-t':
-                            selectedAnnotation.box.y = originalBox.y + deltaY;
-                            selectedAnnotation.box.height = originalBox.height - deltaY;
-                            break;
-                        case 'resize-r':
-                            selectedAnnotation.box.width = originalBox.width + deltaX;
-                            break;
-                        case 'resize-b':
-                            selectedAnnotation.box.height = originalBox.height + deltaY;
-                            break;
-                        case 'resize-l':
-                            selectedAnnotation.box.x = originalBox.x + deltaX;
-                            selectedAnnotation.box.width = originalBox.width - deltaX;
-                            break;
-                    }
-                    
-                    // Ensure width and height are positive
-                    if (selectedAnnotation.box.width < 0) {
-                        selectedAnnotation.box.x += selectedAnnotation.box.width;
-                        selectedAnnotation.box.width = Math.abs(selectedAnnotation.box.width);
-                    }
-                    
-                    if (selectedAnnotation.box.height < 0) {
-                        selectedAnnotation.box.y += selectedAnnotation.box.height;
-                        selectedAnnotation.box.height = Math.abs(selectedAnnotation.box.height);
-                    }
-                    
-                    redraw();
-                }
-            }
+           function handleMouseUp(e) {
+               // Finalize drawing a new box
+               if (isDrawing) {
+                   if (currentBox && currentBox.width > 5 && currentBox.height > 5) {
+                       // Default to first species if none selected
+                       const speciesId = currentSpecies || parseInt(document.querySelector('.species-item').dataset.id);
+                       
+                       // Calculate image dimensions and position with zoom
+                       const imgWidth = image.width * zoomLevel;
+                       const imgHeight = image.height * zoomLevel;
+                       const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
+                       const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
+                       
+                       // Convert the box from screen coordinates to image coordinates before saving
+                       // This is crucial to make sure the box stays where you drew it
+                       const imageBox = {
+                           x: (currentBox.x - imgX) / zoomLevel,
+                           y: (currentBox.y - imgY) / zoomLevel,
+                           width: currentBox.width / zoomLevel,
+                           height: currentBox.height / zoomLevel
+                       };
+                       
+                       const newAnnotation = {
+                           id: Date.now(), // Temporary ID
+                           species_id: speciesId,
+                           box: imageBox, // Use the converted image coordinates
+                           confidence: null, // For manual annotations
+                           is_verified: true
+                       };
+                       
+                       annotations.push(newAnnotation);
+                       selectedAnnotation = newAnnotation;
+                       updateAnnotationList();
+                   }
+                   
+                   isDrawing = false;
+                   currentBox = null;
+               }
+               
+               // Finalize resizing or moving
+               if (dragMode) {
+                   dragMode = null;
+                   dragStartPoint = null;
+                   originalBox = null;
+               }
+               
+               redraw();
+           }
 
-            function handleMouseUp(e) {
-                // Finalize drawing a new box
-                if (isDrawing) {
-                    if (currentBox && currentBox.width > 5 && currentBox.height > 5) {
-                        // Default to first species if none selected
-                        const speciesId = currentSpecies || parseInt(document.querySelector('.species-item').dataset.id);
-                        
-                        // Calculate image dimensions and position with zoom
-                        const imgWidth = image.width * zoomLevel;
-                        const imgHeight = image.height * zoomLevel;
-                        const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
-                        const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
-                        
-                        // Convert the box from screen coordinates to image coordinates before saving
-                        // This is crucial to make sure the box stays where you drew it
-                        const imageBox = {
-                            x: (currentBox.x - imgX) / zoomLevel,
-                            y: (currentBox.y - imgY) / zoomLevel,
-                            width: currentBox.width / zoomLevel,
-                            height: currentBox.height / zoomLevel
-                        };
-                        
-                        const newAnnotation = {
-                            id: Date.now(), // Temporary ID
-                            species_id: speciesId,
-                            box: imageBox, // Use the converted image coordinates
-                            confidence: null, // For manual annotations
-                            is_verified: true
-                        };
-                        
-                        annotations.push(newAnnotation);
-                        selectedAnnotation = newAnnotation;
-                        updateAnnotationList();
-                    }
-                    
-                    isDrawing = false;
-                    currentBox = null;
-                }
-                
-                // Finalize resizing or moving
-                if (dragMode) {
-                    dragMode = null;
-                    dragStartPoint = null;
-                    originalBox = null;
-                }
-                
-                redraw();
-            }
+           // Function to handle canvas click for selection
+           function handleCanvasClick(e) {
+               // Only select if select tool is active
+               if (document.getElementById('select-tool').classList.contains('active')) {
+                   const rect = canvas.getBoundingClientRect();
+                   const scaleX = canvas.width / rect.width;
+                   const scaleY = canvas.height / rect.height;
+                   
+                   const x = (e.clientX - rect.left) * scaleX;
+                   const y = (e.clientY - rect.top) * scaleY;
+                   
+                   // Calculate image dimensions and position with zoom
+                   const imgWidth = image.width * zoomLevel;
+                   const imgHeight = image.height * zoomLevel;
+                   const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
+                   const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
+                   
+                   // Find the annotation that was clicked
+                   let clickedAnnotation = null;
+                   
+                   // Check in reverse order to select the top-most annotation first
+                   for (let i = annotations.length - 1; i >= 0; i--) {
+                       const ann = annotations[i];
+                       const box = ann.box;
+                       
+                       // Apply zoom and pan transformations to the box
+                       const scaledBox = {
+                           x: box.x * zoomLevel + imgX,
+                           y: box.y * zoomLevel + imgY,
+                           width: box.width * zoomLevel,
+                           height: box.height * zoomLevel
+                       };
+                       
+                       if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
+                           y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
+                           clickedAnnotation = ann;
+                           break;
+                       }
+                   }
+                   
+                   // Update selection
+                   selectedAnnotation = clickedAnnotation;
+                   updateAnnotationList();
+                   redraw();
+               }
+           }
 
-            // Function to handle canvas click for selection
-            function handleCanvasClick(e) {
-                // Only select if select tool is active
-                if (document.getElementById('select-tool').classList.contains('active')) {
-                    const rect = canvas.getBoundingClientRect();
-                    const scaleX = canvas.width / rect.width;
-                    const scaleY = canvas.height / rect.height;
-                    
-                    const x = (e.clientX - rect.left) * scaleX;
-                    const y = (e.clientY - rect.top) * scaleY;
-                    
-                    // Calculate image dimensions and position with zoom
-                    const imgWidth = image.width * zoomLevel;
-                    const imgHeight = image.height * zoomLevel;
-                    const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
-                    const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
-                    
-                    // Find the annotation that was clicked
-                    let clickedAnnotation = null;
-                    
-                    // Check in reverse order to select the top-most annotation first
-                    for (let i = annotations.length - 1; i >= 0; i--) {
-                        const ann = annotations[i];
-                        const box = ann.box;
-                        
-                        // Apply zoom and pan transformations to the box
-                        const scaledBox = {
-                            x: box.x * zoomLevel + imgX,
-                            y: box.y * zoomLevel + imgY,
-                            width: box.width * zoomLevel,
-                            height: box.height * zoomLevel
-                        };
-                        
-                        if (x >= scaledBox.x && x <= scaledBox.x + scaledBox.width &&
-                            y >= scaledBox.y && y <= scaledBox.y + scaledBox.height) {
-                            clickedAnnotation = ann;
-                            break;
-                        }
-                    }
-                    
-                    // Update selection
-                    selectedAnnotation = clickedAnnotation;
-                    updateAnnotationList();
-                    redraw();
-                }
-            }
+           // Utility functions for edge detection
+           function isNearPoint(x, y, pointX, pointY) {
+               const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+               return distance <= handleSize;
+           }
 
-            // Utility functions for edge detection
-            function isNearPoint(x, y, pointX, pointY) {
-                const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
-                return distance <= handleSize;
-            }
+           function isNearEdge(x, y, x1, y1, x2, y2) {
+               // Calculate distance from point to line segment
+               const A = x - x1;
+               const B = y - y1;
+               const C = x2 - x1;
+               const D = y2 - y1;
+               
+               const dot = A * C + B * D;
+               const len_sq = C * C + D * D;
+               let param = -1;
+               
+               if (len_sq != 0) {
+                   param = dot / len_sq;
+               }
+               
+               let xx, yy;
+               
+               if (param < 0) {
+                   xx = x1;
+                   yy = y1;
+               } else if (param > 1) {
+                   xx = x2;
+                   yy = y2;
+               } else {
+                   xx = x1 + param * C;
+                   yy = y1 + param * D;
+               }
+               
+               const distance = Math.sqrt(Math.pow(x - xx, 2) + Math.pow(y - yy, 2));
+               return distance <= handleSize;
+           }
 
-            function isNearEdge(x, y, x1, y1, x2, y2) {
-                // Calculate distance from point to line segment
-                const A = x - x1;
-                const B = y - y1;
-                const C = x2 - x1;
-                const D = y2 - y1;
-                
-                const dot = A * C + B * D;
-                const len_sq = C * C + D * D;
-                let param = -1;
-                
-                if (len_sq != 0) {
-                    param = dot / len_sq;
-                }
-                
-                let xx, yy;
-                
-                if (param < 0) {
-                    xx = x1;
-                    yy = y1;
-                } else if (param > 1) {
-                    xx = x2;
-                    yy = y2;
-                } else {
-                    xx = x1 + param * C;
-                    yy = y1 + param * D;
-                }
-                
-                const distance = Math.sqrt(Math.pow(x - xx, 2) + Math.pow(y - yy, 2));
-                return distance <= handleSize;
-            }
+           // Function to draw resize handles
+           function drawHandle(x, y, fillColor, strokeColor) {
+               const handleSize = 8;
+               
+               ctx.fillStyle = fillColor;
+               ctx.strokeStyle = strokeColor;
+               ctx.lineWidth = 1;
+               
+               // Draw filled square with border
+               ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
+               ctx.strokeRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
+           }
 
-            // Function to draw resize handles
-            function drawHandle(x, y, fillColor, strokeColor) {
-                const handleSize = 8;
-                
-                ctx.fillStyle = fillColor;
-                ctx.strokeStyle = strokeColor;
-                ctx.lineWidth = 1;
-                
-                // Draw filled square with border
-                ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
-                ctx.strokeRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
-            }
+           // Function to update the annotation list in the sidebar
+           function updateAnnotationList() {
+               annotationList.innerHTML = '';
+               
+               // Filter out any full-image background annotations for display purposes
+               const displayAnnotations = annotations.filter(ann => {
+                   // Skip background annotations that cover nearly the whole image
+                   if (ann.isBackground && 
+                       ann.box.x < 1 && 
+                       ann.box.y < 1 && 
+                       Math.abs(ann.box.width - image.width) < 5 && 
+                       Math.abs(ann.box.height - image.height) < 5) {
+                       return false;
+                   }
+                   return true;
+               });
+               
+               if (displayAnnotations.length === 0) {
+                   annotationList.innerHTML = '<p>No annotations yet.</p>';
+                   return;
+               }
+               
+               displayAnnotations.forEach(annotation => {
+                   const item = document.createElement('div');
+                   item.className = 'annotation-item';
+                   if (annotation === selectedAnnotation) {
+                       item.className += ' selected';
+                   }
+                   
+                   item.dataset.id = annotation.id;
+                   
+                   // Get species name from the speciesMap or use "Unknown"
+                   const speciesName = speciesMap[annotation.species_id] || 'Unknown';
+                   item.innerHTML = `<strong>${speciesName}</strong>`;
+                   
+                   // Add confidence if available
+                   if (annotation.confidence) {
+                       item.innerHTML += ` - Confidence: ${Math.round(annotation.confidence)}%`;
+                   }
+                   
+                   item.addEventListener('click', () => {
+                       selectedAnnotation = annotation;
+                       updateAnnotationList();
+                       redraw();
+                   });
+                   
+                   annotationList.appendChild(item);
+               });
+           }
 
-            // Function to update the annotation list in the sidebar
-            function updateAnnotationList() {
-                annotationList.innerHTML = '';
-                
-                // Filter out any full-image background annotations for display purposes
-                const displayAnnotations = annotations.filter(ann => {
-                    // Skip background annotations that cover nearly the whole image
-                    if (ann.isBackground && 
-                        ann.box.x < 1 && 
-                        ann.box.y < 1 && 
-                        Math.abs(ann.box.width - image.width) < 5 && 
-                        Math.abs(ann.box.height - image.height) < 5) {
-                        return false;
-                    }
-                    return true;
-                });
-                
-                if (displayAnnotations.length === 0) {
-                    annotationList.innerHTML = '<p>No annotations yet.</p>';
-                    return;
-                }
-                
-                displayAnnotations.forEach(annotation => {
-                    const item = document.createElement('div');
-                    item.className = 'annotation-item';
-                    if (annotation === selectedAnnotation) {
-                        item.className += ' selected';
-                    }
-                    
-                    item.dataset.id = annotation.id;
-                    
-                    // Get species name from the speciesMap or use "Unknown"
-                    const speciesName = speciesMap[annotation.species_id] || 'Unknown';
-                    item.innerHTML = `<strong>${speciesName}</strong>`;
-                    
-                    // Add confidence if available
-                    if (annotation.confidence) {
-                        item.innerHTML += ` - Confidence: ${Math.round(annotation.confidence)}%`;
-                    }
-                    
-                    item.addEventListener('click', () => {
-                        selectedAnnotation = annotation;
-                        updateAnnotationList();
-                        redraw();
-                    });
-                    
-                    annotationList.appendChild(item);
-                });
-            }
+           // Function to set active tool
+           function setActiveTool(tool) {
+               document.querySelectorAll('.toolbar button').forEach(el => {
+                   el.classList.remove('active');
+               });
+               
+               // Always highlight both box and select tools for the smart tool
+               if (tool === 'smarttool') {
+                   document.getElementById('box-tool').classList.add('active');
+                   document.getElementById('select-tool').classList.add('active');
+                   canvas.style.cursor = 'crosshair'; // Default to crosshair
+               } else {
+                   // For backward compatibility
+                   document.getElementById(`${tool}-tool`)?.classList.add('active');
+                   
+                   if (tool === 'box') {
+                       canvas.style.cursor = 'crosshair';
+                   } else if (tool === 'select') {
+                       canvas.style.cursor = 'pointer';
+                   }
+               }
+           }
 
-            // Function to set active tool
-            function setActiveTool(tool) {
-                document.querySelectorAll('.toolbar button').forEach(el => {
-                    el.classList.remove('active');
-                });
-                
-                // Always highlight both box and select tools for the smart tool
-                if (tool === 'smarttool') {
-                    document.getElementById('box-tool').classList.add('active');
-                    document.getElementById('select-tool').classList.add('active');
-                    canvas.style.cursor = 'crosshair'; // Default to crosshair
-                } else {
-                    // For backward compatibility
-                    document.getElementById(`${tool}-tool`)?.classList.add('active');
-                    
-                    if (tool === 'box') {
-                        canvas.style.cursor = 'crosshair';
-                    } else if (tool === 'select') {
-                        canvas.style.cursor = 'pointer';
-                    }
-                }
-            }
+           // Enhanced redraw function for better visualization
+           function redraw() {
+               if (!canvas.getContext) return;
+               
+               ctx.clearRect(0, 0, canvas.width, canvas.height);
+               
+               // Draw image
+               if (image.complete) {
+                   // Calculate image dimensions with zoom
+                   const imgWidth = image.width * zoomLevel;
+                   const imgHeight = image.height * zoomLevel;
+                   
+                   // Calculate position to center the image
+                   const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
+                   const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
+                   
+                   // Draw the image
+                   ctx.drawImage(
+                       image,
+                       imgX,
+                       imgY,
+                       imgWidth,
+                       imgHeight
+                   );
+                   
+                   // Draw annotations with proper scaling
+                   annotations.forEach(annotation => {
+                       // Skip drawing full-image background annotations
+                       if (annotation.isBackground && 
+                           annotation.box.x < 1 && 
+                           annotation.box.y < 1 && 
+                           Math.abs(annotation.box.width - image.width) < 5 && 
+                           Math.abs(annotation.box.height - image.height) < 5) {
+                           return; // Skip this annotation
+                       }
+                       
+                       const box = annotation.box;
+                       
+                       // Transform annotation coordinates based on zoom level and pan
+                       const scaledBox = {
+                           x: box.x * zoomLevel + imgX,
+                           y: box.y * zoomLevel + imgY,
+                           width: box.width * zoomLevel,
+                           height: box.height * zoomLevel
+                       };
+                       
+                       // Get species color
+                       const species_index = Object.keys(speciesMap).indexOf(annotation.species_id.toString());
+                       const color = getSpeciesColor(species_index);
+                       
+                       // Draw rectangle
+                       ctx.strokeStyle = color;
+                       ctx.lineWidth = annotation === selectedAnnotation ? 3 : 2;
+                       ctx.strokeRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
+                       
+                       // Draw semi-transparent fill
+                       ctx.fillStyle = color + '33'; // 20% opacity
+                       ctx.fillRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
+                       
+                       // Draw label
+                       const speciesName = speciesMap[annotation.species_id] || 'Unknown';
+                       ctx.fillStyle = color;
+                       ctx.font = '12px Arial';
+                       ctx.fillText(speciesName, scaledBox.x, scaledBox.y - 5);
+                       
+                       // Draw resize handles if selected
+                       if (annotation === selectedAnnotation) {
+                           const handleColor = '#ffffff';
+                           const handleBorderColor = '#000000';
+                           
+                           // Draw corner handles
+                           drawHandle(scaledBox.x, scaledBox.y, handleColor, handleBorderColor); // Top-left
+                           drawHandle(scaledBox.x + scaledBox.width, scaledBox.y, handleColor, handleBorderColor); // Top-right
+                           drawHandle(scaledBox.x, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom-left
+                           drawHandle(scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom-right
+                           
+                           // Draw edge handles
+                           drawHandle(scaledBox.x + scaledBox.width/2, scaledBox.y, handleColor, handleBorderColor); // Top
+                           drawHandle(scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height/2, handleColor, handleBorderColor); // Right
+                           drawHandle(scaledBox.x + scaledBox.width/2, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom
+                           drawHandle(scaledBox.x, scaledBox.y + scaledBox.height/2, handleColor, handleBorderColor); // Left
+                       }
+                   });
+                   
+                   // Draw current box if drawing
+                   if (currentBox && isDrawing) {
+                       ctx.setLineDash([6, 4]);
+                       ctx.strokeStyle = '#3498db';
+                       ctx.lineWidth = 2;
+                       ctx.strokeRect(currentBox.x, currentBox.y, currentBox.width, currentBox.height);
+                       ctx.setLineDash([]);
+                   }
+               }
+           }
 
-            // Enhanced redraw function for better visualization
-            function redraw() {
-                if (!canvas.getContext) return;
-                
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Draw image
-                if (image.complete) {
-                    // Calculate image dimensions with zoom
-                    const imgWidth = image.width * zoomLevel;
-                    const imgHeight = image.height * zoomLevel;
-                    
-                    // Calculate position to center the image
-                    const imgX = (canvas.width - imgWidth) / 2 + panOffset.x;
-                    const imgY = (canvas.height - imgHeight) / 2 + panOffset.y;
-                    
-                    // Draw the image
-                    ctx.drawImage(
-                        image,
-                        imgX,
-                        imgY,
-                        imgWidth,
-                        imgHeight
-                    );
-                    
-                    // Draw annotations with proper scaling
-                    annotations.forEach(annotation => {
-                        // Skip drawing full-image background annotations
-                        if (annotation.isBackground && 
-                            annotation.box.x < 1 && 
-                            annotation.box.y < 1 && 
-                            Math.abs(annotation.box.width - image.width) < 5 && 
-                            Math.abs(annotation.box.height - image.height) < 5) {
-                            return; // Skip this annotation
-                        }
-                        
-                        const box = annotation.box;
-                        
-                        // Transform annotation coordinates based on zoom level and pan
-                        const scaledBox = {
-                            x: box.x * zoomLevel + imgX,
-                            y: box.y * zoomLevel + imgY,
-                            width: box.width * zoomLevel,
-                            height: box.height * zoomLevel
-                        };
-                        
-                        // Get species color
-                        const species_index = Object.keys(speciesMap).indexOf(annotation.species_id.toString());
-                        const color = getSpeciesColor(species_index);
-                        
-                        // Draw rectangle
-                        ctx.strokeStyle = color;
-                        ctx.lineWidth = annotation === selectedAnnotation ? 3 : 2;
-                        ctx.strokeRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
-                        
-                        // Draw semi-transparent fill
-                        ctx.fillStyle = color + '33'; // 20% opacity
-                        ctx.fillRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
-                        
-                        // Draw label
-                        const speciesName = speciesMap[annotation.species_id] || 'Unknown';
-                        ctx.fillStyle = color;
-                        ctx.font = '12px Arial';
-                        ctx.fillText(speciesName, scaledBox.x, scaledBox.y - 5);
-                        
-                        // Draw resize handles if selected
-                        if (annotation === selectedAnnotation) {
-                            const handleColor = '#ffffff';
-                            const handleBorderColor = '#000000';
-                            
-                            // Draw corner handles
-                            drawHandle(scaledBox.x, scaledBox.y, handleColor, handleBorderColor); // Top-left
-                            drawHandle(scaledBox.x + scaledBox.width, scaledBox.y, handleColor, handleBorderColor); // Top-right
-                            drawHandle(scaledBox.x, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom-left
-                            drawHandle(scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom-right
-                            
-                            // Draw edge handles
-                            drawHandle(scaledBox.x + scaledBox.width/2, scaledBox.y, handleColor, handleBorderColor); // Top
-                            drawHandle(scaledBox.x + scaledBox.width, scaledBox.y + scaledBox.height/2, handleColor, handleBorderColor); // Right
-                            drawHandle(scaledBox.x + scaledBox.width/2, scaledBox.y + scaledBox.height, handleColor, handleBorderColor); // Bottom
-                            drawHandle(scaledBox.x, scaledBox.y + scaledBox.height/2, handleColor, handleBorderColor); // Left
-                        }
-                    });
-                    
-                    // Draw current box if drawing
-                    if (currentBox && isDrawing) {
-                        ctx.setLineDash([6, 4]);
-                        ctx.strokeStyle = '#3498db';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(currentBox.x, currentBox.y, currentBox.width, currentBox.height);
-                        ctx.setLineDash([]);
-                    }
-                }
-            }
+           // Function to get species color
+           function getSpeciesColor(index) {
+               const colors = [
+                   '#3498db', // Blue
+                   '#e74c3c', // Red
+                   '#2ecc71', // Green
+                   '#f39c12', // Orange
+                   '#9b59b6', // Purple
+                   '#1abc9c', // Teal
+                   '#34495e', // Dark blue
+                   '#e67e22', // Dark orange
+                   '#95a5a6', // Grey
+                   '#d35400', // Dark orange
+                   '#16a085', // Green blue
+                   '#27ae60', // Green
+                   '#2980b9', // Blue
+                   '#8e44ad', // Purple
+                   '#f1c40f', // Yellow
+               ];
+               
+               return colors[index % colors.length] || '#7f8c8d';
+           }
 
-            // Function to get species color
-            function getSpeciesColor(index) {
-                const colors = [
-                    '#3498db', // Blue
-                    '#e74c3c', // Red
-                    '#2ecc71', // Green
-                    '#f39c12', // Orange
-                    '#9b59b6', // Purple
-                    '#1abc9c', // Teal
-                    '#34495e', // Dark blue
-                    '#e67e22', // Dark orange
-                    '#95a5a6', // Grey
-                    '#d35400', // Dark orange
-                    '#16a085', // Green blue
-                    '#27ae60', // Green
-                    '#2980b9', // Blue
-                    '#8e44ad', // Purple
-                    '#f1c40f', // Yellow
-                ];
-                
-                return colors[index % colors.length] || '#7f8c8d';
-            }
+           // Function to show loading overlay
+           function showLoading() {
+               loadingOverlay.style.display = 'flex';
+           }
 
-            // Function to show loading overlay
-            function showLoading() {
-                loadingOverlay.style.display = 'flex';
-            }
+           // Function to hide loading overlay
+           function hideLoading() {
+               loadingOverlay.style.display = 'none';
+           }
 
-            // Function to hide loading overlay
-            function hideLoading() {
-                loadingOverlay.style.display = 'none';
-            }
-
-            // Function to show notification
-            function showNotification(message, isError = false) {
-                notification.textContent = message;
-                notification.className = 'notification';
-                
-                if (isError) {
-                    notification.classList.add('error');
-                }
-                
-                notification.classList.add('show');
-                
-                // Hide after 3 seconds
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                }, 3000);
-            }
-        });
-    </script>
+           // Function to show notification
+           function showNotification(message, isError = false) {
+               notification.textContent = message;
+               notification.className = 'notification';
+               
+               if (isError) {
+                   notification.classList.add('error');
+               }
+               
+               notification.classList.add('show');
+               
+               // Hide after 3 seconds
+               setTimeout(() => {
+                   notification.classList.remove('show');
+               }, 3000);
+           }
+       });
+   </script>
 </body>
 </html>

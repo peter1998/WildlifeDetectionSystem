@@ -4,8 +4,9 @@ from datetime import datetime
 from flask import current_app
 from werkzeug.utils import secure_filename
 from app import db
-from app.models.models import Image
+from app.models.models import Image, Annotation
 from app.utils.image_utils import get_image_dimensions, extract_image_metadata
+from sqlalchemy import exists, and_
 
 class ImageService:
     """Service for managing camera trap images."""
@@ -66,14 +67,15 @@ class ImageService:
         return None
     
     @staticmethod
-    def get_all_images(page=1, per_page=20, folder=''):
+    def get_all_images(page=1, per_page=20, folder='', annotation_filter='all'):
         """
-        Get a paginated list of all images.
+        Get a paginated list of all images with optional filtering.
         
         Args:
             page (int): Page number (1-indexed)
             per_page (int): Number of items per page
             folder (str): Filter by folder
+            annotation_filter (str): Filter by annotation status ('all', 'annotated', 'unannotated')
             
         Returns:
             tuple: (list of images, total count)
@@ -84,13 +86,57 @@ class ImageService:
         if folder:
             query = query.filter(Image.filename.like(f"{folder}/%"))
         
+        # Apply annotation filter if requested
+        if annotation_filter == 'annotated':
+            # Get images that have at least one annotation
+            query = query.join(Annotation, Image.id == Annotation.image_id)
+            # Use distinct to avoid duplicates when images have multiple annotations
+            query = query.distinct(Image.id)
+        elif annotation_filter == 'unannotated':
+            # Get images that don't have any annotations
+            subquery = db.session.query(Annotation.image_id).distinct()
+            query = query.filter(~Image.id.in_(subquery))
+        
         # Order by upload date (newest first)
         query = query.order_by(Image.upload_date.desc())
+        
+        # Count total before pagination
+        total = query.count()
         
         # Paginate the results
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         
-        return paginated.items, paginated.total
+        return paginated.items, total
+    
+    @staticmethod
+    def get_annotated_images(page=1, per_page=20, folder=''):
+        """
+        Get a paginated list of annotated images.
+        
+        Args:
+            page (int): Page number (1-indexed)
+            per_page (int): Number of items per page
+            folder (str): Filter by folder
+            
+        Returns:
+            tuple: (list of images, total count)
+        """
+        return ImageService.get_all_images(page, per_page, folder, 'annotated')
+    
+    @staticmethod
+    def get_unannotated_images(page=1, per_page=20, folder=''):
+        """
+        Get a paginated list of unannotated images.
+        
+        Args:
+            page (int): Page number (1-indexed)
+            per_page (int): Number of items per page
+            folder (str): Filter by folder
+            
+        Returns:
+            tuple: (list of images, total count)
+        """
+        return ImageService.get_all_images(page, per_page, folder, 'unannotated')
     
     @staticmethod
     def get_image_by_id(image_id):

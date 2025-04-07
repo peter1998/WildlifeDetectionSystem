@@ -145,8 +145,11 @@ def get_images():
     per_page = request.args.get('per_page', 20, type=int)
     folder = request.args.get('folder', '')
     
+    # Parameter for filtering: all, annotated, unannotated
+    annotation_filter = request.args.get('filter', 'all') 
+    
     try:
-        images, total = ImageService.get_all_images(page, per_page, folder)
+        images, total = ImageService.get_all_images(page, per_page, folder, annotation_filter)
         
         result = {
             'success': True,
@@ -162,7 +165,7 @@ def get_images():
                 'location': img.location,
                 'camera_id': img.camera_id,
                 'timestamp': img.timestamp.isoformat() if img.timestamp else None,
-                'is_annotated': len(img.annotations) > 0  # Add this field to track annotated images
+                'is_annotated': len(img.annotations) > 0  # Annotation status marker
             } for img in images]
         }
         
@@ -171,6 +174,78 @@ def get_images():
         return jsonify({
             'success': False,
             'message': f'Error retrieving images: {str(e)}'
+        }), 500
+
+# Route for getting only annotated images
+@images.route('/annotated', methods=['GET'])
+def get_annotated_images():
+    """Get a list of annotated images."""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    folder = request.args.get('folder', '')
+    
+    try:
+        images, total = ImageService.get_annotated_images(page, per_page, folder)
+        
+        result = {
+            'success': True,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'images': [{
+                'id': img.id,
+                'filename': img.filename,
+                'upload_date': img.upload_date.isoformat(),
+                'width': img.width,
+                'height': img.height,
+                'location': img.location,
+                'camera_id': img.camera_id,
+                'timestamp': img.timestamp.isoformat() if img.timestamp else None,
+                'is_annotated': True  # All images here are annotated
+            } for img in images]
+        }
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving annotated images: {str(e)}'
+        }), 500
+
+# Route for getting only unannotated images
+@images.route('/unannotated', methods=['GET'])
+def get_unannotated_images():
+    """Get a list of unannotated images."""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    folder = request.args.get('folder', '')
+    
+    try:
+        images, total = ImageService.get_unannotated_images(page, per_page, folder)
+        
+        result = {
+            'success': True,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'images': [{
+                'id': img.id,
+                'filename': img.filename,
+                'upload_date': img.upload_date.isoformat(),
+                'width': img.width,
+                'height': img.height,
+                'location': img.location,
+                'camera_id': img.camera_id,
+                'timestamp': img.timestamp.isoformat() if img.timestamp else None,
+                'is_annotated': False  # All images here are unannotated
+            } for img in images]
+        }
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving unannotated images: {str(e)}'
         }), 500
 
 @images.route('/<int:image_id>', methods=['GET'])
@@ -195,7 +270,8 @@ def get_image(image_id):
             'height': image.height,
             'location': image.location,
             'camera_id': image.camera_id,
-            'timestamp': image.timestamp.isoformat() if image.timestamp else None
+            'timestamp': image.timestamp.isoformat() if image.timestamp else None,
+            'is_annotated': len(image.annotations) > 0  # Add annotation status marker
         }
     })
 

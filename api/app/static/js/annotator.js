@@ -9,6 +9,7 @@ let isDrawing = false;
 let startX, startY;
 let species = [];
 let drawingMode = false;
+let currentFilter = 'all'; // New variable to track the current filter
 
 // DOM elements
 const imageElement = document.getElementById('current-image');
@@ -70,6 +71,20 @@ function setupEventListeners() {
         canvas.height = imageElement.height;
         drawAnnotations();
     });
+    
+    // Add filter dropdown event listener (if it exists in the HTML)
+    const filterDropdown = document.getElementById('filter-dropdown');
+    if (filterDropdown) {
+        filterDropdown.addEventListener('change', async function() {
+            currentFilter = this.value;
+            await loadImages(); // Reload images with the new filter
+            
+            // Load first image if available
+            if (images.length > 0) {
+                loadImage(0);
+            }
+        });
+    }
 }
 
 // Load species from API
@@ -95,18 +110,57 @@ async function loadSpecies() {
     }
 }
 
-// Load images from API
+// Load images from API with filtering
 async function loadImages() {
     try {
-        const response = await fetch('/api/images/');
+        // Determine the API endpoint based on filter
+        let endpoint = '/api/images/';
+        if (currentFilter === 'annotated') {
+            endpoint = '/api/images/annotated';
+        } else if (currentFilter === 'unannotated') {
+            endpoint = '/api/images/unannotated';
+        }
+        
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         if (data.success) {
             images = data.images;
             imageCounter.textContent = `Image ${currentImageIndex + 1} of ${images.length}`;
+            
+            // Update filter counts if elements exist
+            updateFilterCounts();
         }
     } catch (error) {
         console.error('Error loading images:', error);
+    }
+}
+
+// Update filter count badges
+async function updateFilterCounts() {
+    try {
+        // Get count of all images
+        const allResponse = await fetch('/api/images/?per_page=1');
+        const allData = await allResponse.json();
+        
+        // Get count of annotated images
+        const annotatedResponse = await fetch('/api/images/annotated?per_page=1');
+        const annotatedData = await annotatedResponse.json();
+        
+        // Get count of unannotated images
+        const unannotatedResponse = await fetch('/api/images/unannotated?per_page=1');
+        const unannotatedData = await unannotatedResponse.json();
+        
+        // Update count badges if they exist
+        const allCountElement = document.getElementById('all-count');
+        const annotatedCountElement = document.getElementById('annotated-count');
+        const unannotatedCountElement = document.getElementById('unannotated-count');
+        
+        if (allCountElement) allCountElement.textContent = allData.total;
+        if (annotatedCountElement) annotatedCountElement.textContent = annotatedData.total;
+        if (unannotatedCountElement) unannotatedCountElement.textContent = unannotatedData.total;
+    } catch (error) {
+        console.error('Error updating filter counts:', error);
     }
 }
 
@@ -121,7 +175,19 @@ async function loadImage(index) {
     imageCounter.textContent = `Image ${currentImageIndex + 1} of ${images.length}`;
     
     // Load image
-    imageElement.src = `/api/images/${currentImage.id}`;
+    imageElement.src = `/api/images/${currentImage.id}/file`;
+    
+    // Update annotation status indicator if it exists
+    const statusIndicator = document.getElementById('annotation-status');
+    if (statusIndicator) {
+        if (currentImage.is_annotated) {
+            statusIndicator.textContent = 'Annotated';
+            statusIndicator.className = 'status-indicator annotated';
+        } else {
+            statusIndicator.textContent = 'Not Annotated';
+            statusIndicator.className = 'status-indicator not-annotated';
+        }
+    }
     
     // Load annotations for this image
     await loadAnnotations(currentImage.id);
@@ -234,7 +300,7 @@ function drawAnnotations() {
     });
     
     // Draw current box if drawing
-    if (isDrawing) {
+    if (isDrawing && typeof mouse !== 'undefined') {
         const width = startX - mouse.x;
         const height = startY - mouse.y;
         
@@ -433,8 +499,28 @@ async function saveAnnotations() {
         }
     }
     
+    // Update the annotation status of the current image
+    currentImage.is_annotated = annotations.length > 0;
+    
+    // Update annotation status indicator if it exists
+    const statusIndicator = document.getElementById('annotation-status');
+    if (statusIndicator) {
+        if (currentImage.is_annotated) {
+            statusIndicator.textContent = 'Annotated';
+            statusIndicator.className = 'status-indicator annotated';
+        } else {
+            statusIndicator.textContent = 'Not Annotated';
+            statusIndicator.className = 'status-indicator not-annotated';
+        }
+    }
+    
     // Reload annotations from server
     await loadAnnotations(currentImage.id);
+    
+    // If we're in a filtered view, we might need to reload the image list
+    if (currentFilter !== 'all') {
+        await loadImages();
+    }
 }
 
 // Search for an image by filename
