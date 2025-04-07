@@ -641,6 +641,7 @@
                         showNotification('Error applying filter.', true);
                     } finally {
                         hideLoading();
+                        this.blur();
                     }
                 });
             }
@@ -1225,23 +1226,32 @@
            
            // Function to update the progress
            function updateProgress() {
-               // Count annotated images
-               let count = 0;
-               for (const img of allImages) {
-                   if (img.is_annotated) {
-                       count++;
-                   }
-               }
-               
-               annotatedImagesCount = count;
-               
-               const percentage = allImages.length > 0 
-                   ? Math.round((annotatedImagesCount / allImages.length) * 100) 
-                   : 0;
-               
-               console.log(`Progress updated: ${count}/${allImages.length} (${percentage}%)`);
-               progressText.textContent = `${percentage}% Complete`;
-           }
+                // Count annotated images
+                let count = 0;
+                for (const img of allImages) {
+                    if (img.is_annotated) {
+                        count++;
+                    }
+                }
+                
+                annotatedImagesCount = count;
+                
+                let percentage = allImages.length > 0 
+                    ? Math.round((annotatedImagesCount / allImages.length) * 100) 
+                    : 0;
+                
+                console.log(`Progress updated: ${count}/${allImages.length} (${percentage}%)`);
+                
+                // Customize message based on current filter
+                if (currentFilter === 'annotated') {
+                    progressText.textContent = '100% Complete (Filtered: Annotated only)';
+                } else if (currentFilter === 'unannotated') {
+                    progressText.textContent = '0% Complete (Filtered: Unannotated only)';
+                } else {
+                    // For "all" filter, show actual percentage
+                    progressText.textContent = `${percentage}% Complete (${count}/${allImages.length})`;
+                }
+            }
            
            // Function to select a species
            function selectSpecies(speciesId) {
