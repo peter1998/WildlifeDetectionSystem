@@ -6,7 +6,7 @@ from flask import flash, redirect, url_for, request, Markup, render_template
 from app.models.models import Image, Species, Annotation, EnvironmentalData
 from app import db
 import os
-from sqlalchemy import text
+from sqlalchemy import text, func
 from datetime import datetime
 
 class BaseModelView(ModelView):
@@ -108,6 +108,52 @@ class DashboardView(BaseView):
     @expose('/')
     def index(self):
         return redirect('/')
+
+class AnnotationStatsView(BaseView):
+    """View for annotation statistics and visualizations"""
+    @expose('/')
+    def index(self):
+        try:
+            # Query to count annotations by species
+            stats = db.session.query(
+                Species.id,
+                Species.name.label('species_name'),
+                func.count(Annotation.id).label('count')
+            ).join(
+                Annotation, Species.id == Annotation.species_id
+            ).group_by(
+                Species.id, Species.name
+            ).order_by(
+                func.count(Annotation.id).desc()
+            ).all()
+            
+            # Format stats for display
+            species_stats = [
+                {'id': item.id, 'name': item.species_name, 'count': item.count} 
+                for item in stats
+            ]
+            
+            # Calculate total annotations
+            total_annotations = Annotation.query.count()
+            
+            # Get recent annotations
+            recent_annotations = db.session.query(
+                Annotation, Species.name, Image.filename
+            ).join(
+                Species, Annotation.species_id == Species.id
+            ).join(
+                Image, Annotation.image_id == Image.id
+            ).order_by(
+                Annotation.created_at.desc()
+            ).limit(10).all()
+            
+            return self.render('admin/annotation_stats.html', 
+                              species_stats=species_stats,
+                              total_annotations=total_annotations,
+                              recent_annotations=recent_annotations)
+        except Exception as e:
+            flash(f'Error loading annotation statistics: {str(e)}', 'error')
+            return redirect(url_for('admin.index'))
 
 class SimpleSQLiteBrowserView(BaseView):
     """A simpler SQLite table browser that displays record counts"""
@@ -224,6 +270,11 @@ def init_admin(app):
     except Exception as e:
         print(f"Could not add EnvironmentalData view: {e}")
     
+    # Add annotation statistics view
+    admin.add_view(AnnotationStatsView(name='Annotation Stats', 
+                                     endpoint='annotation_stats',
+                                     category="Reports"))
+    
     # Add simpler SQLite browser
     admin.add_view(SimpleSQLiteBrowserView(name='SQLite Browser', 
                                           endpoint='sqlite_browser',
@@ -245,7 +296,7 @@ def init_admin(app):
     except Exception as e:
         print(f"Could not add FileAdmin view: {e}")
     
-    # Create templates needed for SQLite browser
+    # Create templates needed for SQLite browser and annotation stats
     create_sqlite_browser_templates(app)
     
     return admin
@@ -412,6 +463,148 @@ def create_sqlite_browser_templates(app):
 {% endblock %}
 """
     
+    # Template for annotation statistics
+    annotation_stats_html = """
+{% extends 'admin/master.html' %}
+{% block body %}
+<div class="container">
+    <h1>Annotation Statistics</h1>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <h4>Total Annotations: {{ total_annotations }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-7">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Annotations by Species</h3>
+                </div>
+                <div class="panel-body">
+                    <div style="height: 400px;">
+                        <canvas id="speciesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Species Breakdown</h3>
+                </div>
+                <div class="panel-body">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Species</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in species_stats %}
+                            <tr>
+                                <td>{{ stat.name }}</td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ "%.1f"|format(stat.count / total_annotations * 100) if total_annotations else 0 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Recent Annotations</h3>
+                </div>
+                <div class="panel-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Species</th>
+                                <th>Image</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ann, species_name, filename in recent_annotations %}
+                            <tr>
+                                <td>{{ ann.id }}</td>
+                                <td>{{ species_name }}</td>
+                                <td>{{ filename }}</td>
+                                <td>{{ ann.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+<script>
+    // Prepare data for chart
+    var speciesData = {
+        labels: [{% for stat in species_stats %}"{{ stat.name }}",{% endfor %}],
+        datasets: [{
+            label: 'Annotation Count',
+            data: [{% for stat in species_stats %}{{ stat.count }},{% endfor %}],
+            backgroundColor: [
+                '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', 
+                '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#d35400',
+                '#16a085', '#27ae60', '#2980b9', '#8e44ad', '#f1c40f'
+            ]
+        }]
+    };
+    
+    // Create chart
+    window.addEventListener('load', function() {
+        var ctx = document.getElementById('speciesChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: speciesData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Annotation Distribution by Species'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Annotations'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+"""
+    
     # Write template files
     with open(os.path.join(template_dir, 'sqlite_browser_simple.html'), 'w') as f:
         f.write(sqlite_browser_simple_html)
@@ -421,3 +614,6 @@ def create_sqlite_browser_templates(app):
     
     with open(os.path.join(template_dir, 'delete_actions.html'), 'w') as f:
         f.write(delete_actions_html)
+        
+    with open(os.path.join(template_dir, 'annotation_stats.html'), 'w') as f:
+        f.write(annotation_stats_html)
