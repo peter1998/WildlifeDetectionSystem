@@ -217,19 +217,26 @@ class AnnotationService:
     @staticmethod
     def export_yolo_format(output_dir):
         """
-        Export annotations in YOLO format for training.
+        Export annotations in YOLO format with train/val split.
         
         Args:
             output_dir (str): Directory to save YOLO format files
-            
+                
         Returns:
             dict: Summary of exported files
         """
+        print(f"Starting YOLO export to {output_dir}")
+        
         # Create output directories
-        images_dir = os.path.join(output_dir, 'images')
-        labels_dir = os.path.join(output_dir, 'labels')
-        os.makedirs(images_dir, exist_ok=True)
-        os.makedirs(labels_dir, exist_ok=True)
+        train_images_dir = os.path.join(output_dir, 'images', 'train')
+        val_images_dir = os.path.join(output_dir, 'images', 'val')
+        train_labels_dir = os.path.join(output_dir, 'labels', 'train')
+        val_labels_dir = os.path.join(output_dir, 'labels', 'val')
+        
+        os.makedirs(train_images_dir, exist_ok=True)
+        os.makedirs(val_images_dir, exist_ok=True)
+        os.makedirs(train_labels_dir, exist_ok=True)
+        os.makedirs(val_labels_dir, exist_ok=True)
         
         # Get all species for class mapping
         species = Species.query.all()
@@ -240,31 +247,107 @@ class AnnotationService:
             for s in sorted(species, key=lambda x: species_map[x.id]):
                 f.write(f"{s.name}\n")
         
-        # Process each image with annotations
+        # Get all images with annotations
         images_with_annotations = db.session.query(Image).join(Annotation).distinct().all()
         
-        for img in images_with_annotations:
-            # Copy image to images directory
-            shutil.copy(img.original_path, os.path.join(images_dir, os.path.basename(img.filename)))
-            
-            # Create label file
-            label_file = os.path.join(labels_dir, os.path.basename(img.filename).rsplit('.', 1)[0] + '.txt')
-            
-            with open(label_file, 'w') as f:
-                for ann in img.annotations:
-                    # Convert to YOLO format: class x_center y_center width height
-                    class_id = species_map[ann.species_id]
-                    x_center = (ann.x_min + ann.x_max) / 2
-                    y_center = (ann.y_min + ann.y_max) / 2
-                    width = ann.x_max - ann.x_min
-                    height = ann.y_max - ann.y_min
+        # Simple 80/20 split
+        import random
+        random.shuffle(images_with_annotations)
+        split_idx = int(len(images_with_annotations) * 0.8)
+        train_images = images_with_annotations[:split_idx]
+        val_images = images_with_annotations[split_idx:]
+        
+        print(f"Found {len(images_with_annotations)} images total")
+        print(f"Using {len(train_images)} for training, {len(val_images)} for validation")
+        
+        # Simple counters
+        train_count = 0
+        val_count = 0
+        train_ann_count = 0
+        val_ann_count = 0
+        
+        # Process training images
+        for img in train_images:
+            if not img.original_path or not os.path.exists(img.original_path):
+                print(f"Warning: Image file not found at {img.original_path}")
+                continue
+                
+            try:
+                # Copy image to training images directory
+                dest_path = os.path.join(train_images_dir, os.path.basename(img.filename))
+                shutil.copy(img.original_path, dest_path)
+                
+                # Create label file
+                label_file = os.path.join(train_labels_dir, os.path.basename(img.filename).rsplit('.', 1)[0] + '.txt')
+                
+                with open(label_file, 'w') as f:
+                    annotation_count = 0
+                    for ann in img.annotations:
+                        species_name = Species.query.get(ann.species_id).name
+                        if species_name.lower() == 'background':
+                            continue
+                            
+                        # Convert to YOLO format: class x_center y_center width height
+                        class_id = species_map[ann.species_id]
+                        x_center = (ann.x_min + ann.x_max) / 2
+                        y_center = (ann.y_min + ann.y_max) / 2
+                        width = ann.x_max - ann.x_min
+                        height = ann.y_max - ann.y_min
+                        
+                        f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+                        annotation_count += 1
                     
-                    f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+                    if annotation_count > 0:
+                        train_count += 1
+                        train_ann_count += annotation_count
+                
+            except Exception as e:
+                print(f"Error processing training image {img.filename}: {str(e)}")
+                continue
+        
+        # Process validation images (similar code)
+        for img in val_images:
+            if not img.original_path or not os.path.exists(img.original_path):
+                print(f"Warning: Image file not found at {img.original_path}")
+                continue
+                
+            try:
+                # Copy image to validation images directory
+                dest_path = os.path.join(val_images_dir, os.path.basename(img.filename))
+                shutil.copy(img.original_path, dest_path)
+                
+                # Create label file
+                label_file = os.path.join(val_labels_dir, os.path.basename(img.filename).rsplit('.', 1)[0] + '.txt')
+                
+                with open(label_file, 'w') as f:
+                    annotation_count = 0
+                    for ann in img.annotations:
+                        species_name = Species.query.get(ann.species_id).name
+                        if species_name.lower() == 'background':
+                            continue
+                            
+                        # Convert to YOLO format: class x_center y_center width height
+                        class_id = species_map[ann.species_id]
+                        x_center = (ann.x_min + ann.x_max) / 2
+                        y_center = (ann.y_min + ann.y_max) / 2
+                        width = ann.x_max - ann.x_min
+                        height = ann.y_max - ann.y_min
+                        
+                        f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+                        annotation_count += 1
+                    
+                    if annotation_count > 0:
+                        val_count += 1
+                        val_ann_count += annotation_count
+                        
+            except Exception as e:
+                print(f"Error processing validation image {img.filename}: {str(e)}")
+                continue
         
         # Create data.yaml
         with open(os.path.join(output_dir, 'data.yaml'), 'w') as f:
-            f.write(f"train: {os.path.abspath(images_dir)}\n")
-            f.write(f"val: {os.path.abspath(images_dir)}\n")  # Use same for now
+            f.write(f"train: {os.path.abspath(train_images_dir)}\n")
+            f.write(f"val: {os.path.abspath(val_images_dir)}\n")
             f.write(f"nc: {len(species)}\n")
             f.write("names: [")
             for i, s in enumerate(sorted(species, key=lambda x: species_map[x.id])):
@@ -273,9 +356,15 @@ class AnnotationService:
                 f.write(f"'{s.name}'")
             f.write("]\n")
         
+        print(f"Created data.yaml at {os.path.join(output_dir, 'data.yaml')}")
+        
         return {
             'success': True,
             'images_count': len(images_with_annotations),
             'classes_count': len(species),
+            'train_images': train_count,
+            'val_images': val_count,
+            'train_annotations': train_ann_count, 
+            'val_annotations': val_ann_count,
             'output_dir': output_dir
         }
