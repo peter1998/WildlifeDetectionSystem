@@ -37,11 +37,18 @@
             color: #ecf0f1;
         }
         
-        .card-grid {
+        .top-row {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
             margin-top: 30px;
+        }
+        
+        .bottom-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
         }
         
         .card {
@@ -77,6 +84,10 @@
             background-color: #e67e22;
         }
         
+        .card-ml .card-header {
+            background-color: #1abc9c;
+        }
+        
         .card-content {
             padding: 15px;
         }
@@ -96,6 +107,7 @@
             text-decoration: none;
             transition: background-color 0.3s ease;
             font-weight: bold;
+            margin-bottom: 8px;
         }
         
         .button:hover {
@@ -104,7 +116,9 @@
         
         .button-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
+            margin-top: 10px;
         }
         
         .status-section {
@@ -166,6 +180,14 @@
             background-color: #7f8c8d;
         }
         
+        .button-ml {
+            background-color: #1abc9c;
+        }
+        
+        .button-ml:hover {
+            background-color: #16a085;
+        }
+        
         .progress-bar {
             height: 10px;
             background-color: #ecf0f1;
@@ -179,6 +201,23 @@
             background-color: #3498db;
             width: 0%;
             transition: width 0.5s ease-in-out;
+        }
+        
+        /* Loading spinner for buttons */
+        .button-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -214,7 +253,8 @@
             </div>
         </div>
         
-        <div class="card-grid">
+        <!-- Top Row: Annotation, Export, ML Workbench -->
+        <div class="top-row">
             <!-- Annotation Tools -->
             <div class="card card-active">
                 <div class="card-header">Annotation Tools</div>
@@ -222,35 +262,13 @@
                     <p class="card-description">Tools for labeling wildlife in camera trap images with bounding boxes and species information.</p>
                     <div class="button-group">
                         <a href="/advanced-annotator" class="button">Advanced Annotator</a>
-                        </div>
-                </div>
-            </div>
-            
-            <!-- Data Management -->
-            <div class="card">
-                <div class="card-header">Data Management</div>
-                <div class="card-content">
-                    <p class="card-description">Tools for managing image datasets, species catalog, and environmental data.</p>
-                    <div class="button-group">
-                        <a href="#" id="index-images-btn" class="button">Index Images</a>
-                        <a href="#" id="manage-species-btn" class="button button-secondary">Manage Species</a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Analysis -->
-            <div class="card card-analysis">
-                <div class="card-header">Analysis Tools</div>
-                <div class="card-content">
-                    <p class="card-description">Tools for analyzing seasonal patterns, environmental factors, and animal behavior.</p>
-                    <div class="button-group">
                         <a href="#" id="seasonal-analysis-btn" class="button">Seasonal Analysis</a>
                         <a href="/environmental-editor" class="button button-secondary">Environmental Editor</a>
                     </div>
                 </div>
             </div>
             
-            <!-- Export -->
+            <!-- Export Tools -->
             <div class="card card-export">
                 <div class="card-header">Export Tools</div>
                 <div class="card-content">
@@ -258,11 +276,26 @@
                     <div class="button-group">
                         <a href="#" id="export-coco-btn" class="button">Export COCO</a>
                         <a href="#" id="export-yolo-btn" class="button button-secondary">Export YOLO</a>
+                        <a href="#" id="index-images-btn" class="button">Index Images</a>
+                        <a href="#" id="manage-species-btn" class="button button-secondary">Manage Species</a>
                     </div>
                 </div>
             </div>
-
-
+            
+            <!-- ML Workbench -->
+            <div class="card card-ml">
+                <div class="card-header">ML Workbench</div>
+                <div class="card-content">
+                    <p class="card-description">Interactive environment for model training, evaluation and deployment with Jupyter notebooks.</p>
+                    <div class="button-group">
+                        <a href="#" id="launch-jupyter-btn" class="button button-ml">Launch Jupyter</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Row: Admin Tools -->
+        <div class="bottom-row">
             <!-- Admin Tools Card -->
             <div class="card">
                 <div class="card-header" style="background-color: #e74c3c; color: white;">Admin Tools</div>
@@ -305,10 +338,34 @@
             }
         }
         
-        // Set up button click handlers
+        // Helper function to show loading state on buttons
+        function setButtonLoading(buttonElement, isLoading, originalText) {
+            if (isLoading) {
+                const spinner = document.createElement('span');
+                spinner.className = 'button-spinner';
+                buttonElement.prepend(spinner);
+                buttonElement.setAttribute('disabled', 'true');
+                buttonElement.style.opacity = '0.7';
+                buttonElement.textContent = 'Processing...';
+            } else {
+                // Remove any spinners
+                const spinner = buttonElement.querySelector('.button-spinner');
+                if (spinner) spinner.remove();
+                
+                // Reset text and state
+                buttonElement.removeAttribute('disabled');
+                buttonElement.style.opacity = '1';
+                buttonElement.textContent = originalText;
+            }
+        }
+        
+        // Set up existing button click handlers
         document.getElementById('index-images-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             if (confirm('This will scan the raw_images directory for new images. Continue?')) {
+                const originalText = this.textContent;
+                setButtonLoading(this, true);
+                
                 try {
                     const response = await fetch('/api/images/index-existing', {
                         method: 'POST',
@@ -328,12 +385,17 @@
                 } catch (error) {
                     console.error('Error indexing images:', error);
                     alert('Error indexing images. See console for details.');
+                } finally {
+                    setButtonLoading(this, false, originalText);
                 }
             }
         });
         
         document.getElementById('export-coco-btn').addEventListener('click', async function(e) {
             e.preventDefault();
+            const originalText = this.textContent;
+            setButtonLoading(this, true);
+            
             try {
                 const response = await fetch('/api/annotations/export');
                 const result = await response.json();
@@ -342,11 +404,16 @@
             } catch (error) {
                 console.error('Error exporting annotations:', error);
                 alert('Error exporting annotations. See console for details.');
+            } finally {
+                setButtonLoading(this, false, originalText);
             }
         });
         
         document.getElementById('export-yolo-btn').addEventListener('click', async function(e) {
             e.preventDefault();
+            const originalText = this.textContent;
+            setButtonLoading(this, true);
+            
             try {
                 const response = await fetch('/api/annotations/export/yolo');
                 const result = await response.json();
@@ -355,6 +422,8 @@
             } catch (error) {
                 console.error('Error exporting annotations:', error);
                 alert('Error exporting annotations. See console for details.');
+            } finally {
+                setButtonLoading(this, false, originalText);
             }
         });
         
@@ -366,6 +435,9 @@
         document.getElementById('manage-species-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             // For now, just show the species list
+            const originalText = this.textContent;
+            setButtonLoading(this, true);
+            
             try {
                 const response = await fetch('/api/species/');
                 const result = await response.json();
@@ -382,6 +454,52 @@
             } catch (error) {
                 console.error('Error fetching species:', error);
                 alert('Error fetching species. See console for details.');
+            } finally {
+                setButtonLoading(this, false, originalText);
+            }
+        });
+        
+        // New handler for Launch Jupyter button
+        document.getElementById('launch-jupyter-btn').addEventListener('click', async function(e) {
+            e.preventDefault();
+            const originalText = this.textContent;
+            setButtonLoading(this, true);
+            
+            try {
+                // Try to check if Jupyter is already running
+                const statusResponse = await fetch('/api/jupyter/status');
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    
+                    if (statusData.running) {
+                        // If already running, open it in a new tab
+                        window.open(statusData.url, '_blank');
+                    } else {
+                        // Start Jupyter
+                        const startResponse = await fetch('/api/jupyter/start');
+                        if (startResponse.ok) {
+                            const startData = await startResponse.json();
+                            
+                            if (startData.success) {
+                                console.log("Jupyter Lab started successfully");
+                                // Open in a new tab
+                                window.open(startData.url, '_blank');
+                            } else {
+                                alert("Failed to start Jupyter Lab: " + startData.message);
+                            }
+                        } else {
+                            alert("Failed to communicate with Jupyter API. Server returned " + startResponse.status);
+                        }
+                    }
+                } else {
+                    // If the status endpoint doesn't exist or returns error
+                    alert("Jupyter integration not available. Please make sure the Jupyter API is enabled.");
+                }
+            } catch (error) {
+                console.error('Error launching Jupyter:', error);
+                alert('Error launching Jupyter. Make sure you have Jupyter Lab installed.');
+            } finally {
+                setButtonLoading(this, false, originalText);
             }
         });
         
