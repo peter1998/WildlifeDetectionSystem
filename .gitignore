@@ -160,3 +160,33 @@ data/export/*
 !data/processed_images/.gitkeep
 !data/export/.gitkeep
 api/instance/wildlife_detection.db
+
+# YOLOv8 specific
+# Model weights (large binary files)
+models/trained/*/*.pt
+models/trained/*/weights/*.pt
+*.pt
+runs/detect/*/*.pt
+
+# Training visualizations (optional - uncomment if you don't want to track these)
+# *_batch*.jpg
+# train_batch*.jpg
+# val_batch*.jpg
+# *_labels*.jpg
+# P_curve.png
+# R_curve.png
+# PR_curve.png
+# F1_curve.png
+# confusion_matrix*.png
+
+# Keep configuration files
+!models/trained/*/args.yaml
+
+# Generated validation results
+runs/detect/*
+runs/train/*
+runs/val/*
+
+# Keep specific result files you want to track
+# !models/trained/*/results.csv
+# !models/trained/*/confusion_matrix.png
