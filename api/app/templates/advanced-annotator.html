@@ -942,19 +942,33 @@
                }
            }
            
-           // Function to load previous image
-           function loadPreviousImage() {
-               if (currentImageIndex > 0) {
-                   loadImage(allImages[currentImageIndex - 1].id);
-               }
-           }
-           
-           // Function to load next image
-           function loadNextImage() {
-               if (currentImageIndex < allImages.length - 1) {
-                   loadImage(allImages[currentImageIndex + 1].id);
-               }
-           }
+                    // Function to load previous image with wrap-around
+            function loadPreviousImage() {
+                if (currentImageIndex > 0) {
+                    // Normal previous image behavior
+                    loadImage(allImages[currentImageIndex - 1].id);
+                } else {
+                    // If at the first image, wrap around to the last image
+                    loadImage(allImages[allImages.length - 1].id);
+                    
+                    // Optional: Show a notification to inform the user
+                    showNotification('Wrapped to last image');
+                }
+            }
+
+            // Function to load next image with wrap-around
+            function loadNextImage() {
+                if (currentImageIndex < allImages.length - 1) {
+                    // Normal next image behavior
+                    loadImage(allImages[currentImageIndex + 1].id);
+                } else {
+                    // If at the last image, wrap around to the first image
+                    loadImage(allImages[0].id);
+                    
+                    // Optional: Show a notification to inform the user
+                    showNotification('Wrapped to first image');
+                }
+            }
            
            // Function to load annotations for an image with special handling for background annotations
            async function loadAnnotationsForImage(imageId) {
