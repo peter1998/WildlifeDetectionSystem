@@ -3,11 +3,14 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.fileadmin import FileAdmin
 from flask_admin.actions import action
 from flask import flash, redirect, url_for, request, Markup, render_template
-from app.models.models import Image, Species, Annotation, EnvironmentalData
+from app.models.models import Image, Species, Annotation, EnvironmentalData, BehavioralNote, SequenceEvent
 from app import db
 import os
 from sqlalchemy import text, func
 from datetime import datetime
+
+from wtforms import Form, StringField, TextAreaField, validators
+from wtforms.validators import DataRequired, Length
 
 class BaseModelView(ModelView):
     """Base model view with common improvements"""
@@ -24,6 +27,15 @@ class BaseModelView(ModelView):
         'upload_date': lambda v, c, m, p: m.upload_date.strftime('%Y-%m-%d %H:%M:%S') if m.upload_date else '',
     }
 
+class SpeciesForm(Form):
+    """Custom form for Species model to avoid tuple/dict confusion in WTForms"""
+    name = StringField('Name', validators=[DataRequired(), Length(max=100)], 
+                      description='Common name (e.g., "Red Deer")')
+    scientific_name = StringField('Scientific Name', validators=[Length(max=255)], 
+                                 description='Latin name (e.g., "Cervus elaphus")')
+    description = TextAreaField('Description', 
+                              description='Additional information about the species')
+
 class SpeciesView(BaseModelView):
     """Custom view for Species model"""
     column_list = ['id', 'name', 'scientific_name', 'description']
@@ -35,6 +47,23 @@ class SpeciesView(BaseModelView):
     # More readable column names
     column_labels = {
         'scientific_name': 'Scientific Name'
+    }
+    
+    # Fix for form creation issue - specify form class
+    form = SpeciesForm
+    
+    # Add helpful descriptions for form fields
+    form_widget_args = {
+        'name': {
+            'placeholder': 'Enter species common name (e.g., Red Deer)'
+        },
+        'scientific_name': {
+            'placeholder': 'Enter Latin name (e.g., Cervus elaphus)'
+        },
+        'description': {
+            'rows': 5,
+            'placeholder': 'Enter description of the species'
+        }
     }
 
 class ImageView(BaseModelView):
@@ -102,6 +131,22 @@ class EnvironmentalDataView(BaseModelView):
                   'light_condition', 'vegetation_type']
     column_searchable_list = ['image_id', 'light_condition', 'vegetation_type']
     column_filters = ['image_id', 'moon_phase', 'snow_cover', 'light_condition']
+
+class BehavioralNoteView(BaseModelView):
+    """Custom view for BehavioralNote model"""
+    column_list = ['id', 'annotation_id', 'behavior_type', 'notes', 'created_at']
+    column_searchable_list = ['behavior_type', 'notes']
+    column_filters = ['annotation_id', 'behavior_type', 'created_at']
+    column_sortable_list = ['id', 'annotation_id', 'behavior_type', 'created_at']
+    column_default_sort = ('id', True)
+
+class SequenceEventView(BaseModelView):
+    """Custom view for SequenceEvent model"""
+    column_list = ['id', 'location', 'species_id', 'timestamp', 'previous_event_id', 'time_since_previous']
+    column_searchable_list = ['location']
+    column_filters = ['location', 'species_id', 'timestamp']
+    column_sortable_list = ['id', 'timestamp', 'species_id']
+    column_default_sort = ('timestamp', True)
 
 class DashboardView(BaseView):
     """View for dashboard link"""
@@ -259,28 +304,34 @@ def init_admin(app):
                                  endpoint='annotation_admin_endpoint',
                                  category="Database"))
     
-    # Add EnvironmentalData if it exists in your models
+    # Add additional model views
     try:
-        # Check if the EnvironmentalData model exists
-        if 'EnvironmentalData' in globals():
-            admin.add_view(EnvironmentalDataView(EnvironmentalData, db.session, 
-                                               name='Environmental Data', 
-                                               endpoint='environmental_data_admin_endpoint',
-                                               category="Database"))
+        admin.add_view(EnvironmentalDataView(EnvironmentalData, db.session, 
+                                           name='Environmental Data', 
+                                           endpoint='environmental_data_admin_endpoint',
+                                           category="Database"))
+        
+        admin.add_view(BehavioralNoteView(BehavioralNote, db.session,
+                                         name='Behavioral Notes',
+                                         endpoint='behavioral_note_admin_endpoint',
+                                         category="Database"))
+        
+        admin.add_view(SequenceEventView(SequenceEvent, db.session,
+                                        name='Sequence Events',
+                                        endpoint='sequence_event_admin_endpoint',
+                                        category="Database"))
     except Exception as e:
-        print(f"Could not add EnvironmentalData view: {e}")
+        print(f"Could not add some model views: {e}")
     
-    # Add annotation statistics view
+    # Add analysis and utility views
     admin.add_view(AnnotationStatsView(name='Annotation Stats', 
                                      endpoint='annotation_stats',
                                      category="Reports"))
     
-    # Add simpler SQLite browser
     admin.add_view(SimpleSQLiteBrowserView(name='SQLite Browser', 
                                           endpoint='sqlite_browser',
                                           category="Tools"))
     
-    # Add delete actions view
     admin.add_view(DeleteActionsView(name='Delete Actions', 
                                    endpoint='delete_actions', 
                                    category="Management"))
@@ -296,15 +347,19 @@ def init_admin(app):
     except Exception as e:
         print(f"Could not add FileAdmin view: {e}")
     
-    # Create templates needed for SQLite browser and annotation stats
-    create_sqlite_browser_templates(app)
+    # Create templates needed for admin interface
+    create_admin_templates(app)
     
     return admin
 
-def create_sqlite_browser_templates(app):
-    """Create the template files needed for SQLite browser"""
+def create_admin_templates(app):
+    """Create the template files needed for admin interface"""
     template_dir = os.path.join(app.root_path, 'templates', 'admin')
     os.makedirs(template_dir, exist_ok=True)
+    
+    # Create model directory for custom model templates
+    model_dir = os.path.join(template_dir, 'model')
+    os.makedirs(model_dir, exist_ok=True)
     
     # Template for simplified SQLite browser
     sqlite_browser_simple_html = """

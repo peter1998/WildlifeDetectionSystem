@@ -1,0 +1,12 @@
+{% extends 'admin/model/create.html' %}
+
+{% block body %}
+  {{ super() }}
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add any custom JavaScript for the species creation form
+      console.log('Species creation form loaded');
+    });
+  </script>
+{% endblock %}

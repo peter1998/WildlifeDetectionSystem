@@ -1,0 +1,12 @@
+{% extends 'admin/model/edit.html' %}
+
+{% block body %}
+  {{ super() }}
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add any custom JavaScript for the species edit form
+      console.log('Species edit form loaded');
+    });
+  </script>
+{% endblock %}
