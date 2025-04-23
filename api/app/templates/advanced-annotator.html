@@ -1240,31 +1240,36 @@
            
            // Function to update the progress
            function updateProgress() {
-                // Count annotated images
-                let count = 0;
+                // Track overall dataset statistics regardless of current filter
+                let totalImages = 0;
+                let totalAnnotated = 0;
+                
+                // Make API request to get overall statistics if needed
+                // For now, we'll calculate from the loaded images
                 for (const img of allImages) {
                     if (img.is_annotated) {
-                        count++;
+                        totalAnnotated++;
                     }
+                    totalImages++;
                 }
                 
-                annotatedImagesCount = count;
+                annotatedImagesCount = totalAnnotated;
                 
-                let percentage = allImages.length > 0 
-                    ? Math.round((annotatedImagesCount / allImages.length) * 100) 
+                let percentage = totalImages > 0 
+                    ? Math.round((totalAnnotated / totalImages) * 100) 
                     : 0;
                 
-                console.log(`Progress updated: ${count}/${allImages.length} (${percentage}%)`);
+                console.log(`Progress updated: ${totalAnnotated}/${totalImages} (${percentage}%)`);
                 
-                // Customize message based on current filter
+                // Always show the overall progress, but indicate current filter
+                let filterInfo = "";
                 if (currentFilter === 'annotated') {
-                    progressText.textContent = '100% Complete (Filtered: Annotated only)';
+                    filterInfo = " (Viewing: Annotated only)";
                 } else if (currentFilter === 'unannotated') {
-                    progressText.textContent = '0% Complete (Filtered: Unannotated only)';
-                } else {
-                    // For "all" filter, show actual percentage
-                    progressText.textContent = `${percentage}% Complete (${count}/${allImages.length})`;
+                    filterInfo = " (Viewing: Unannotated only)";
                 }
+                
+                progressText.textContent = `${percentage}% Complete (${totalAnnotated}/${totalImages})${filterInfo}`;
             }
            
            // Function to select a species
