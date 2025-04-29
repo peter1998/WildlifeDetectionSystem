@@ -391,16 +391,30 @@
             }
         });
         
+        // Updated Export COCO button handler
         document.getElementById('export-coco-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             const originalText = this.textContent;
             setButtonLoading(this, true);
             
             try {
+                // First trigger the COCO export
                 const response = await fetch('/api/annotations/export');
                 const result = await response.json();
                 
-                alert('COCO export triggered. Check the export directory for results.');
+                if (result.success) {
+                    console.log("COCO export successful:", result);
+                    
+                    // Get the export name from the output_dir
+                    const outputDir = result.output_dir;
+                    const exportName = outputDir.split('/').pop();
+                    console.log("Extracted export name:", exportName);
+                    
+                    // Generate report for this export
+                    await generateExportReport(exportName);
+                } else {
+                    alert('COCO export failed. Check console for details.');
+                }
             } catch (error) {
                 console.error('Error exporting annotations:', error);
                 alert('Error exporting annotations. See console for details.');
@@ -408,22 +422,93 @@
                 setButtonLoading(this, false, originalText);
             }
         });
-        
+
+        // Updated Export YOLO button handler
         document.getElementById('export-yolo-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             const originalText = this.textContent;
             setButtonLoading(this, true);
             
             try {
+                // First trigger the YOLO export
                 const response = await fetch('/api/annotations/export/yolo');
                 const result = await response.json();
                 
-                alert('YOLO export triggered. Check the export directory for results.');
+                if (result.success) {
+                    console.log("YOLO export successful:", result);
+                    
+                    // Get the export name from the output_dir
+                    const outputDir = result.output_dir;
+                    const exportName = outputDir.split('/').pop();
+                    console.log("Extracted export name:", exportName);
+                    
+                    // Generate report for this export
+                    await generateExportReport(exportName);
+                } else {
+                    alert('YOLO export failed. Check console for details.');
+                }
             } catch (error) {
                 console.error('Error exporting annotations:', error);
                 alert('Error exporting annotations. See console for details.');
             } finally {
                 setButtonLoading(this, false, originalText);
+            }
+        });
+
+        // Function to generate a report for an export
+        async function generateExportReport(exportName) {
+            console.log("Generating report for export:", exportName);
+            
+            try {
+                const response = await fetch('/api/generate-report/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ export_name: exportName })
+                });
+                
+                const data = await response.json();
+                console.log("Report generation response:", data);
+                
+                if (data.success) {
+                    const reportPath = data.pdf_report_path || "the reports directory";
+                    alert(`Export completed and report generated successfully!\n\nReport saved to: ${reportPath}`);
+                    return true;
+                } else {
+                    console.error("Error generating report:", data.message);
+                    alert(`Export completed, but report generation failed: ${data.message}`);
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error during report generation:", error);
+                alert("Export completed, but there was an error generating the report. Check console for details.");
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Find the export tools button group
+            const exportButtonGroup = document.querySelector('.card-export .button-group');
+            
+            if (exportButtonGroup) {
+                // Create a "View Reports" button
+                const viewReportsBtn = document.createElement('a');
+                viewReportsBtn.href = '#';
+                viewReportsBtn.id = 'view-reports-btn';
+                viewReportsBtn.className = 'button';
+                viewReportsBtn.textContent = 'View Reports';
+                
+                // Add click handler
+                viewReportsBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const reportsDir = `/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports`;
+                    alert(`Reports are saved in:\n${reportsDir}\n\nCheck this directory to view generated reports.`);
+                });
+                
+                // Add to the button group
+                exportButtonGroup.appendChild(viewReportsBtn);
             }
         });
         

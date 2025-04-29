@@ -1,0 +1,72 @@
+=== Wildlife Detection System Export Report ===
+
+Export Name: coco_default_20250429_085011
+Export Type: COCO
+Export Path: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/coco_default_20250429_085011
+Generated: 2025-04-29 08:50:19
+
+Total Files: 1883
+Total Size: 3708.31 MB
+
+File Types:
+  .jpg: 1882
+  .json: 1
+
+COCO Dataset Structure:
+  Images: 1882
+  Annotations: 452
+  Categories: 30
+
+Categories (30):
+  1: Red Deer
+  2: Male Roe Deer
+  3: Female Roe Deer
+  4: Fallow Deer
+  5: Wild Boar
+  6: Chamois
+  7: Fox
+  8: Wolf
+  9: Jackal
+  10: Brown Bear
+  11: Badger
+  12: Weasel
+  13: Stoat
+  14: Polecat
+  15: Marten
+  16: Otter
+  17: Wildcat
+  18: Rabbit
+  19: Hare
+  20: Squirrel
+  21: Dormouse
+  22: Hedgehog
+  23: Turtle
+  24: Blackbird
+  25: Nightingale
+  26: Pheasant
+  27: Human
+  28: Background
+  29: Dog
+  30: woodpecker
+
+Category Distribution:
+Category             Count    Percentage  
+----------------------------------------
+Rabbit               135      29.9%       
+Female Roe Deer      80       17.7%       
+Male Roe Deer        79       17.5%       
+Human                66       14.6%       
+Fox                  44       9.7%       
+Jackal               18       4.0%       
+Badger               4        0.9%       
+Squirrel             4        0.9%       
+Weasel               4        0.9%       
+Turtle               3        0.7%       
+Blackbird            3        0.7%       
+Dog                  3        0.7%       
+Wildcat              3        0.7%       
+Fallow Deer          2        0.4%       
+woodpecker           2        0.4%       
+Nightingale          1        0.2%       
+Red Deer             1        0.2%       
+

@@ -4,6 +4,7 @@ import json
 from app import db
 from app.models.models import Annotation, Image, Species
 from app.services.annotation_service import AnnotationService
+from datetime import datetime
 
 # Create blueprint for annotation routes
 annotations = Blueprint('annotations', __name__, url_prefix='/api/annotations')
@@ -240,24 +241,30 @@ def delete_annotation(annotation_id):
 
 @annotations.route('/export', methods=['GET'])
 def export_annotations():
-    """Export annotations in specified format."""
-    format = request.args.get('format', 'coco')
-    
+    """Export annotations in COCO format."""
     try:
-        if format.lower() == 'coco':
-            output_file = os.path.join(current_app.config['ANNOTATIONS_FOLDER'], 'coco_annotations.json')
-            result = AnnotationService.export_coco_format(output_file)
-            
-            return jsonify({
-                'success': True,
-                'message': 'Annotations exported successfully in COCO format',
-                'file_path': output_file
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'message': f'Unsupported format: {format}'
-            }), 400
+        # Generate a timestamped directory name if not specified
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dataset_name = request.args.get('dataset', 'default')
+        
+        output_dir = request.args.get(
+            'output_dir', 
+            os.path.join(current_app.config['EXPORT_DIR'], f'coco_{dataset_name}_{timestamp}')
+        )
+        
+        result = AnnotationService.export_coco_format(output_dir)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Annotations exported successfully in COCO format',
+            'output_dir': output_dir,
+            'file_path': os.path.join(output_dir, 'annotations.json'),
+            'stats': {
+                'images': len(result.get('images', [])),
+                'annotations': len(result.get('annotations', [])),
+                'categories': len(result.get('categories', []))
+            }
+        }), 200
     except Exception as e:
         return jsonify({
             'success': False,
@@ -268,11 +275,123 @@ def export_annotations():
 def export_yolo():
     """Export annotations in YOLO format."""
     try:
-        output_dir = request.args.get('output_dir', os.path.join(current_app.config['EXPORT_DIR'], 'yolo_export'))
+        # Generate a timestamped directory name if not specified
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dataset_name = request.args.get('dataset', 'default')
+        
+        output_dir = request.args.get(
+            'output_dir', 
+            os.path.join(current_app.config['EXPORT_DIR'], f'yolo_{dataset_name}_{timestamp}')
+        )
         
         result = AnnotationService.export_yolo_format(output_dir)
         return jsonify(result)
     
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@annotations.route('/datasets', methods=['GET'])
+def get_datasets():
+    """Get list of annotated datasets (folders with images)."""
+    try:
+        datasets = AnnotationService.get_annotated_datasets()
+        return jsonify({
+            'success': True,
+            'datasets': datasets
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@annotations.route('/exports', methods=['GET'])
+def get_exports():
+    """Get list of existing exports."""
+    try:
+        export_dir = current_app.config['EXPORT_DIR']
+        exports = []
+        
+        if os.path.exists(export_dir):
+            for item in os.listdir(export_dir):
+                item_path = os.path.join(export_dir, item)
+                if os.path.isdir(item_path):
+                    # Identify export type from directory name or structure
+                    export_type = "unknown"
+                    if item.startswith("yolo_"):
+                        export_type = "YOLO"
+                    elif item.startswith("coco_"):
+                        export_type = "COCO"
+                    
+                    # Get creation time
+                    created = datetime.fromtimestamp(os.path.getctime(item_path)).isoformat()
+                    
+                    # Get size
+                    total_size = 0
+                    for dirpath, dirnames, filenames in os.walk(item_path):
+                        for f in filenames:
+                            fp = os.path.join(dirpath, f)
+                            total_size += os.path.getsize(fp)
+                    
+                    exports.append({
+                        'name': item,
+                        'path': item_path,
+                        'type': export_type,
+                        'created': created,
+                        'size_bytes': total_size
+                    })
+        
+        return jsonify({
+            'success': True,
+            'exports': exports
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@annotations.route('/export/both', methods=['GET'])
+def export_both_formats():
+    """Export annotations in both YOLO and COCO formats in one call."""
+    try:
+        # Generate a timestamped directory name if not specified
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dataset_name = request.args.get('dataset', 'default')
+        
+        # Export in YOLO format
+        yolo_output_dir = os.path.join(current_app.config['EXPORT_DIR'], f'yolo_{dataset_name}_{timestamp}')
+        yolo_result = AnnotationService.export_yolo_format(yolo_output_dir)
+        
+        # Export in COCO format
+        coco_output_dir = os.path.join(current_app.config['EXPORT_DIR'], f'coco_{dataset_name}_{timestamp}')
+        coco_result = AnnotationService.export_coco_format(coco_output_dir)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Annotations exported successfully in both YOLO and COCO formats',
+            'yolo_export': {
+                'output_dir': yolo_output_dir,
+                'stats': {
+                    'images_count': yolo_result.get('images_count', 0),
+                    'classes_count': yolo_result.get('classes_count', 0),
+                    'train_images': yolo_result.get('train_images', 0),
+                    'val_images': yolo_result.get('val_images', 0)
+                }
+            },
+            'coco_export': {
+                'output_dir': coco_output_dir,
+                'file_path': os.path.join(coco_output_dir, 'annotations.json'),
+                'stats': {
+                    'images': len(coco_result.get('images', [])),
+                    'annotations': len(coco_result.get('annotations', [])),
+                    'categories': len(coco_result.get('categories', []))
+                }
+            }
+        }), 200
     except Exception as e:
         return jsonify({
             'success': False,

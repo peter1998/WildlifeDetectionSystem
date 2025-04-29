@@ -70,7 +70,8 @@ def create_app(config_name='development', init_admin=True):
     from .routes.environmental_routes import environmental as environmental_blueprint
     from .routes.system import system as system_blueprint  # Add the new system blueprint
     from .routes.jupyter_routes import jupyter_bp  # Add the new Jupyter blueprint
-    
+    from .routes.report_routes import report_bp
+
     # Register static_pages blueprint first to handle the root URL
     try:
         app.register_blueprint(static_pages_blueprint)
@@ -86,7 +87,8 @@ def create_app(config_name='development', init_admin=True):
         (annotations_blueprint, 'annotations'),
         (environmental_blueprint, 'environmental'),
         (system_blueprint, 'system'),  # Add the system blueprint to the mappings
-        (jupyter_bp, 'jupyter')  # Add the jupyter blueprint to the mappings
+        (jupyter_bp, 'jupyter'),  # Add the jupyter blueprint to the mappings
+        (report_bp, 'report')
     ]
     
     for blueprint, name in blueprint_mappings:

@@ -1,0 +1,84 @@
+=== Wildlife Detection System Export Report ===
+
+Export Name: yolo_default_20250429_085425
+Export Type: YOLO
+Export Path: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_default_20250429_085425
+Generated: 2025-04-29 08:54:27
+
+Total Files: 893
+Total Size: 784.01 MB
+
+File Types:
+  .txt: 446
+  .jpg: 445
+  .json: 1
+  .yaml: 1
+
+YOLO Dataset Structure:
+  Training Images: 356
+  Validation Images: 89
+  Training Labels: 356
+  Validation Labels: 89
+
+Classes (30):
+  0: Red Deer
+  1: Male Roe Deer
+  2: Female Roe Deer
+  3: Fallow Deer
+  4: Wild Boar
+  5: Chamois
+  6: Fox
+  7: Wolf
+  8: Jackal
+  9: Brown Bear
+  10: Badger
+  11: Weasel
+  12: Stoat
+  13: Polecat
+  14: Marten
+  15: Otter
+  16: Wildcat
+  17: Rabbit
+  18: Hare
+  19: Squirrel
+  20: Dormouse
+  21: Hedgehog
+  22: Turtle
+  23: Blackbird
+  24: Nightingale
+  25: Pheasant
+  26: Human
+  27: Background
+  28: Dog
+  29: woodpecker
+
+Dataset Summary:
+  total_images: 445
+  training_images: 356
+  validation_images: 89
+  total_annotations: 452
+  training_annotations: 361
+  validation_annotations: 91
+  species_count: 30
+
+Class Distribution:
+Class                Train    Val      Total    Train %    Val %     
+----------------------------------------------------------------------
+Human                53       13       66       80.3%      19.7%     
+Rabbit               108      27       135      80.0%      20.0%     
+Female Roe Deer      66       14       80       82.5%      17.5%     
+Fox                  36       8        44       81.8%      18.2%     
+Male Roe Deer        56       23       79       70.9%      29.1%     
+Jackal               14       4        18       77.8%      22.2%     
+Turtle               3        0        3        100.0%      0.0%     
+Badger               4        0        4        100.0%      0.0%     
+Fallow Deer          2        0        2        100.0%      0.0%     
+Blackbird            3        0        3        100.0%      0.0%     
+Squirrel             4        0        4        100.0%      0.0%     
+Dog                  3        0        3        100.0%      0.0%     
+Wildcat              2        1        3        66.7%      33.3%     
+Nightingale          1        0        1        100.0%      0.0%     
+woodpecker           2        0        2        100.0%      0.0%     
+Weasel               3        1        4        75.0%      25.0%     
+Red Deer             1        0        1        100.0%      0.0%     
+
