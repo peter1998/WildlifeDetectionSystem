@@ -1,0 +1,2 @@
+#!/bin/bash
+jupyter lab --no-browser --port=8888 --notebook-dir="/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/notebooks" > "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/temp/jupyter.log" 2>&1 &

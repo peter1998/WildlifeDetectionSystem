@@ -369,38 +369,75 @@
             }
         }
         
-        // Function to open JupyterLab with a specific file
-        function openJupyterLabFile(filePath) {
-            // Base URL for JupyterLab
-            const baseUrl = "http://localhost:8888";
-            
-            // Generate a random workspace ID (auto-X) to avoid conflicts
-            const workspaceId = "auto-" + Math.random().toString(36).substring(2, 3).toUpperCase();
-            
-            // Construct the URL - UPDATED WITH CORRECT PATHS
-            const jupyterUrl = `${baseUrl}/lab/workspaces/${workspaceId}/tree${filePath}`;
-            
-            console.log("Opening JupyterLab at:", jupyterUrl);
-            
-            // Open in a new tab
-            window.open(jupyterUrl, '_blank');
+        // Function to check Jupyter status using your existing API endpoint
+        async function checkJupyterStatus() {
+            try {
+                const response = await fetch('/api/jupyter/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("Jupyter status:", data);
+                    return data;
+                }
+                return { running: false };
+            } catch (error) {
+                console.error("Error checking Jupyter status:", error);
+                return { running: false };
+            }
         }
-        
-        // Function to open JupyterLab at the folder level
-        function openJupyterLabFolder(folderPath) {
-            // Base URL for JupyterLab
+
+        // Function to start Jupyter using your existing API endpoint
+        async function startJupyter() {
+            try {
+                console.log("Attempting to start Jupyter...");
+                const response = await fetch('/api/jupyter/start', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("Jupyter start response:", data);
+                    return data;
+                } else {
+                    console.error("Failed to start Jupyter:", response.statusText);
+                    return { success: false, message: "Server error starting Jupyter" };
+                }
+            } catch (error) {
+                console.error("Error starting Jupyter:", error);
+                return { success: false, message: error.message };
+            }
+        }
+
+        // Function to ensure Jupyter is running before opening notebook
+        async function ensureJupyterAndOpenNotebook(notebookPath) {
+            // First check if Jupyter is already running
+            const status = await checkJupyterStatus();
+            
+            if (!status.running) {
+                // Try to start Jupyter
+                console.log("Jupyter not running, attempting to start...");
+                const startResult = await startJupyter();
+                
+                if (!startResult.success) {
+                    console.error("Failed to start Jupyter:", startResult.message);
+                    return { 
+                        success: false, 
+                        message: "Failed to start Jupyter: " + startResult.message 
+                    };
+                }
+                
+                // Wait a moment for Jupyter to fully initialize
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            // Now Jupyter should be running, open the notebook
             const baseUrl = "http://localhost:8888";
-            
-            // Generate a random workspace ID (auto-X) to avoid conflicts
             const workspaceId = "auto-" + Math.random().toString(36).substring(2, 3).toUpperCase();
+            const jupyterUrl = `${baseUrl}/lab/tree/${notebookPath.replace(/^\//, '')}`;
             
-            // Construct the URL to open JupyterLab at the folder level
-            const folderUrl = `${baseUrl}/lab/workspaces/${workspaceId}/tree${folderPath}`;
+            console.log("Opening notebook at:", jupyterUrl);
+            window.open(jupyterUrl, '_blank');
             
-            console.log("Opening JupyterLab folder at:", folderUrl);
-            
-            // Open in a new tab
-            window.open(folderUrl, '_blank');
+            return { success: true };
         }
         
         // Set up existing button click handlers
@@ -571,35 +608,41 @@
             }
         });
         
-        // Training Notebook button handler - Now opening folder level instead
-        document.getElementById('launch-jupyter-btn').addEventListener('click', function(e) {
+        // Updated Training Notebook button handler with auto-start capability
+        document.getElementById('launch-jupyter-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             const originalText = this.textContent;
             setButtonLoading(this, true);
             
             try {
-                // Instead of trying to open a specific file, open the training folder
-                openJupyterLabFolder('/training/wildlife_model.ipynb');
+                const result = await ensureJupyterAndOpenNotebook('training/wildlife_model.ipynb');
+                
+                if (!result.success) {
+                    alert(`Error opening notebook: ${result.message || 'Unknown error'}`);
+                }
             } catch (error) {
-                console.error('Error launching training folder:', error);
-                alert('Error launching training folder. See console for details.');
+                console.error('Error launching notebook:', error);
+                alert('Error launching notebook: ' + error.message);
             } finally {
                 setButtonLoading(this, false, originalText);
             }
         });
 
-        // Analysis Notebook button handler - Now opening folder level instead
-        document.getElementById('launch-analysis-notebook-btn').addEventListener('click', function(e) {
+        // Updated Analysis Notebook button handler with auto-start capability
+        document.getElementById('launch-analysis-notebook-btn').addEventListener('click', async function(e) {
             e.preventDefault();
             const originalText = this.textContent;
             setButtonLoading(this, true);
             
             try {
-                // Instead of trying to open a specific file, open the training folder
-                openJupyterLabFolder('/training/training.ipynb');
+                const result = await ensureJupyterAndOpenNotebook('training/training.ipynb');
+                
+                if (!result.success) {
+                    alert(`Error opening notebook: ${result.message || 'Unknown error'}`);
+                }
             } catch (error) {
-                console.error('Error launching training folder:', error);
-                alert('Error launching training folder. See console for details.');
+                console.error('Error launching notebook:', error);
+                alert('Error launching notebook: ' + error.message);
             } finally {
                 setButtonLoading(this, false, originalText);
             }
