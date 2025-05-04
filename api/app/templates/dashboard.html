@@ -188,6 +188,14 @@
             background-color: #16a085;
         }
         
+        .button-analysis {
+            background-color: #9b59b6;
+        }
+        
+        .button-analysis:hover {
+            background-color: #8e44ad;
+        }
+        
         .progress-bar {
             height: 10px;
             background-color: #ecf0f1;
@@ -278,6 +286,7 @@
                         <a href="#" id="export-yolo-btn" class="button button-secondary">Export YOLO</a>
                         <a href="#" id="index-images-btn" class="button">Index Images</a>
                         <a href="#" id="manage-species-btn" class="button button-secondary">Manage Species</a>
+                        <a href="#" id="view-reports-btn" class="button">View Reports</a>
                     </div>
                 </div>
             </div>
@@ -288,7 +297,8 @@
                 <div class="card-content">
                     <p class="card-description">Interactive environment for model training, evaluation and deployment with Jupyter notebooks.</p>
                     <div class="button-group">
-                        <a href="#" id="launch-jupyter-btn" class="button button-ml">Launch Jupyter</a>
+                        <a href="#" id="launch-jupyter-btn" class="button button-ml">Training Notebook</a>
+                        <a href="#" id="launch-analysis-notebook-btn" class="button button-analysis">Analysis Notebook</a>
                     </div>
                 </div>
             </div>
@@ -357,6 +367,40 @@
                 buttonElement.style.opacity = '1';
                 buttonElement.textContent = originalText;
             }
+        }
+        
+        // Function to open JupyterLab with a specific file
+        function openJupyterLabFile(filePath) {
+            // Base URL for JupyterLab
+            const baseUrl = "http://localhost:8888";
+            
+            // Generate a random workspace ID (auto-X) to avoid conflicts
+            const workspaceId = "auto-" + Math.random().toString(36).substring(2, 3).toUpperCase();
+            
+            // Construct the URL - UPDATED WITH CORRECT PATHS
+            const jupyterUrl = `${baseUrl}/lab/workspaces/${workspaceId}/tree${filePath}`;
+            
+            console.log("Opening JupyterLab at:", jupyterUrl);
+            
+            // Open in a new tab
+            window.open(jupyterUrl, '_blank');
+        }
+        
+        // Function to open JupyterLab at the folder level
+        function openJupyterLabFolder(folderPath) {
+            // Base URL for JupyterLab
+            const baseUrl = "http://localhost:8888";
+            
+            // Generate a random workspace ID (auto-X) to avoid conflicts
+            const workspaceId = "auto-" + Math.random().toString(36).substring(2, 3).toUpperCase();
+            
+            // Construct the URL to open JupyterLab at the folder level
+            const folderUrl = `${baseUrl}/lab/workspaces/${workspaceId}/tree${folderPath}`;
+            
+            console.log("Opening JupyterLab folder at:", folderUrl);
+            
+            // Open in a new tab
+            window.open(folderUrl, '_blank');
         }
         
         // Set up existing button click handlers
@@ -487,29 +531,12 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Find the export tools button group
-            const exportButtonGroup = document.querySelector('.card-export .button-group');
+        // View Reports button handler
+        document.getElementById('view-reports-btn').addEventListener('click', function(e) {
+            e.preventDefault();
             
-            if (exportButtonGroup) {
-                // Create a "View Reports" button
-                const viewReportsBtn = document.createElement('a');
-                viewReportsBtn.href = '#';
-                viewReportsBtn.id = 'view-reports-btn';
-                viewReportsBtn.className = 'button';
-                viewReportsBtn.textContent = 'View Reports';
-                
-                // Add click handler
-                viewReportsBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const reportsDir = `/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports`;
-                    alert(`Reports are saved in:\n${reportsDir}\n\nCheck this directory to view generated reports.`);
-                });
-                
-                // Add to the button group
-                exportButtonGroup.appendChild(viewReportsBtn);
-            }
+            const reportsDir = `/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports`;
+            alert(`Reports are saved in:\n${reportsDir}\n\nCheck this directory to view generated reports.`);
         });
         
         document.getElementById('seasonal-analysis-btn').addEventListener('click', function(e) {
@@ -544,45 +571,35 @@
             }
         });
         
-        // New handler for Launch Jupyter button
-        document.getElementById('launch-jupyter-btn').addEventListener('click', async function(e) {
+        // Training Notebook button handler - Now opening folder level instead
+        document.getElementById('launch-jupyter-btn').addEventListener('click', function(e) {
             e.preventDefault();
             const originalText = this.textContent;
             setButtonLoading(this, true);
             
             try {
-                // Try to check if Jupyter is already running
-                const statusResponse = await fetch('/api/jupyter/status');
-                if (statusResponse.ok) {
-                    const statusData = await statusResponse.json();
-                    
-                    if (statusData.running) {
-                        // If already running, open it in a new tab
-                        window.open(statusData.url, '_blank');
-                    } else {
-                        // Start Jupyter
-                        const startResponse = await fetch('/api/jupyter/start');
-                        if (startResponse.ok) {
-                            const startData = await startResponse.json();
-                            
-                            if (startData.success) {
-                                console.log("Jupyter Lab started successfully");
-                                // Open in a new tab
-                                window.open(startData.url, '_blank');
-                            } else {
-                                alert("Failed to start Jupyter Lab: " + startData.message);
-                            }
-                        } else {
-                            alert("Failed to communicate with Jupyter API. Server returned " + startResponse.status);
-                        }
-                    }
-                } else {
-                    // If the status endpoint doesn't exist or returns error
-                    alert("Jupyter integration not available. Please make sure the Jupyter API is enabled.");
-                }
+                // Instead of trying to open a specific file, open the training folder
+                openJupyterLabFolder('/training/wildlife_model.ipynb');
             } catch (error) {
-                console.error('Error launching Jupyter:', error);
-                alert('Error launching Jupyter. Make sure you have Jupyter Lab installed.');
+                console.error('Error launching training folder:', error);
+                alert('Error launching training folder. See console for details.');
+            } finally {
+                setButtonLoading(this, false, originalText);
+            }
+        });
+
+        // Analysis Notebook button handler - Now opening folder level instead
+        document.getElementById('launch-analysis-notebook-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const originalText = this.textContent;
+            setButtonLoading(this, true);
+            
+            try {
+                // Instead of trying to open a specific file, open the training folder
+                openJupyterLabFolder('/training/training.ipynb');
+            } catch (error) {
+                console.error('Error launching training folder:', error);
+                alert('Error launching training folder. See console for details.');
             } finally {
                 setButtonLoading(this, false, originalText);
             }
