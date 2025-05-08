@@ -20,6 +20,11 @@ def environmental_editor():
     """Serve the environmental data editor page."""
     return render_template('environmental-editor.html')
 
+@static_pages.route('/model-performance')
+def model_performance():
+    """Serve the model performance dashboard page."""
+    return render_template('model_performance.html')
+
 @static_pages.route('/static/<path:filename>')
 def static_files(filename):
     """Serve static files."""

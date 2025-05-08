@@ -200,6 +200,18 @@ class AnnotationStatsView(BaseView):
             flash(f'Error loading annotation statistics: {str(e)}', 'error')
             return redirect(url_for('admin.index'))
 
+class ModelPerformanceView(BaseView):
+    """View for model performance metrics and visualizations"""
+    @expose('/')
+    def index(self):
+        try:
+            # This view serves the model_performance.html template
+            # All data is fetched via AJAX from the /api/system/model-performance endpoint
+            return self.render('admin/model_performance.html')
+        except Exception as e:
+            flash(f'Error loading model performance data: {str(e)}', 'error')
+            return redirect(url_for('admin.index'))
+
 class SimpleSQLiteBrowserView(BaseView):
     """A simpler SQLite table browser that displays record counts"""
     @expose('/')
@@ -327,6 +339,11 @@ def init_admin(app):
     admin.add_view(AnnotationStatsView(name='Annotation Stats', 
                                      endpoint='annotation_stats',
                                      category="Reports"))
+    
+    # Add the Model Performance view
+    admin.add_view(ModelPerformanceView(name='Model Performance', 
+                                      endpoint='model_performance',
+                                      category="Reports"))
     
     admin.add_view(SimpleSQLiteBrowserView(name='SQLite Browser', 
                                           endpoint='sqlite_browser',

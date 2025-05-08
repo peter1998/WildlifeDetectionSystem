@@ -1,20 +1,20 @@
 # Wildlife Detection Summary Report
 
-**Generated on:** 2025-05-03 15:00:45
+**Generated on:** 2025-05-05 18:42:44
 
 ## Model Information
 - **Model Path:** /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_20250503_1345/weights/best.pt
 - **Model Type:** best
 - **Confidence Threshold:** 0.1
 - **IoU Threshold:** 0.7
-- **Device:** 0
+- **Device:** cpu
 
 ## Overall Statistics
 - **Total Images:** 20
 - **Images with Detections:** 7 (35.0%)
 - **Total Detections:** 9
-- **Total Processing Time:** 0.59 seconds
-- **Average Processing Time per Image:** 0.0295 seconds
+- **Total Processing Time:** 0.77 seconds
+- **Average Processing Time per Image:** 0.0387 seconds
 
 ## Species Distribution
 | Species | Count | Percentage |
@@ -38,15 +38,15 @@
 | twilight | 15 | 75.0% |
 
 ## Confidence Analysis
-- **Average Confidence:** 0.596
+- **Average Confidence:** 0.597
 - **Median Confidence:** 0.677
 - **Min Confidence:** 0.119
 - **Max Confidence:** 0.865
 
 ## Bounding Box Size Analysis
-- **Average Area:** 1285137.3 pixels²
+- **Average Area:** 1285207.3 pixels²
 - **Average Width:** 909.4 pixels
-- **Average Height:** 1176.6 pixels
+- **Average Height:** 1176.7 pixels
 - **Average Aspect Ratio (w/h):** 0.77
 
 ## Top 5 Largest Detections
@@ -55,7 +55,7 @@
 | 0878_x_IMAG0001.JPG | Human | 0.119 | 5165280 |
 | 1252_15_03_24_Моллова_курия_IMAG0246.JPG | Female Roe Deer | 0.828 | 1741244 |
 | 0040_16_06_IMAG0007.JPG | Human | 0.757 | 947646 |
-| 0011_28_05_IMAG0148.JPG | Male Roe Deer | 0.386 | 758778 |
+| 0011_28_05_IMAG0148.JPG | Male Roe Deer | 0.387 | 758778 |
 | 0011_28_05_IMAG0148.JPG | Female Roe Deer | 0.677 | 758664 |
 
 ## Top 5 Highest Confidence Detections
