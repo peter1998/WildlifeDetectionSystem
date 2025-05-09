@@ -368,3 +368,31 @@ def get_taxonomic_performance(model_id):
             'success': False,
             'message': f'Error retrieving taxonomic performance: {str(e)}'
         }), 500
+
+# Add a debug endpoint for direct API inspection
+@system.route('/api/system/model-performance-debug')
+def model_performance_debug():
+    """Debug endpoint for model performance data."""
+    try:
+        model_details = ModelPerformanceService.get_current_model_details()
+        performance_metrics = ModelPerformanceService.get_performance_metrics()
+        confusion_matrix = ModelPerformanceService.get_confusion_matrix()
+        detection_stats = ModelPerformanceService.get_recent_detection_stats()
+        
+        return jsonify({
+            'success': True,
+            'model_details': model_details,
+            'performance_metrics': performance_metrics,
+            'confusion_matrix_info': {
+                'shape': [len(confusion_matrix['matrix']), 
+                        len(confusion_matrix['matrix'][0]) if confusion_matrix['matrix'] else 0],
+                'class_names': confusion_matrix['class_names'],
+                'synthetic': confusion_matrix.get('synthetic', False)
+            },
+            'detection_stats': detection_stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error in debug endpoint: {str(e)}'
+        }), 500

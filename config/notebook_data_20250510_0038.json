@@ -1,0 +1,80 @@
+{
+  "class_names": [
+    "Red Deer",
+    "Male Roe Deer",
+    "Female Roe Deer",
+    "Fallow Deer",
+    "Wild Boar",
+    "Chamois",
+    "Fox",
+    "Wolf",
+    "Jackal",
+    "Brown Bear",
+    "Badger",
+    "Weasel",
+    "Stoat",
+    "Polecat",
+    "Marten",
+    "Otter",
+    "Wildcat",
+    "Rabbit",
+    "Hare",
+    "Squirrel",
+    "Dormouse",
+    "Hedgehog",
+    "Turtle",
+    "Blackbird",
+    "Nightingale",
+    "Pheasant",
+    "Human",
+    "Background",
+    "Dog",
+    "woodpecker"
+  ],
+  "taxonomic_groups": {
+    "Deer": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "Carnivores": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "Small_Mammals": [
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    "Birds": [
+      23,
+      24,
+      25,
+      29
+    ],
+    "Other": [
+      4,
+      5,
+      22,
+      26,
+      27,
+      28
+    ]
+  },
+  "standard_export_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038",
+  "hierarchical_export_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038",
+  "yolo_dataset_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_default_20250429_085945",
+  "timestamp": "20250510_0038"
+}

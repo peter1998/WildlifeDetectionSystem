@@ -1,0 +1,32 @@
+{
+  "notebook": "01_data_preparation",
+  "execution_timestamp": "20250510_0038",
+  "description": "Data preparation and YOLO export",
+  "generated_files": {
+    "configuration": {
+      "data_config": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/data_config_20250510_0038.json",
+      "notebook_data": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/notebook_data_20250510_0038.json"
+    },
+    "standard_dataset": {
+      "base_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038",
+      "data_yaml": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/data.yaml",
+      "classes_txt": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/classes.txt",
+      "report_md": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/export_report.md",
+      "report_json": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/export_report.json"
+    },
+    "hierarchical_dataset": {
+      "base_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038",
+      "data_yaml": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/data.yaml",
+      "classes_txt": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/classes.txt",
+      "mapping_json": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/hierarchical_mapping.json",
+      "report_md": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/export_report.md",
+      "report_json": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/export_report.json"
+    }
+  },
+  "next_steps": {
+    "notebook": "02_model_training.ipynb",
+    "required_inputs": [
+      "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/notebook_data_20250510_0038.json"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "project_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem",
+  "dataset_name": "test_01",
+  "timestamp": "20250510_0025",
+  "paths": {
+    "raw_data": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/raw_images/test_01",
+    "processed_data": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/processed/test_01",
+    "export_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export",
+    "models_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained",
+    "reports_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports",
+    "yolo_export": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0025",
+    "yolo_hierarchical_export": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0025"
+  },
+  "yolo_dataset_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_default_20250429_085945"
+}
