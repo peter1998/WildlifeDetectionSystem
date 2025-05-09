@@ -1,0 +1,74 @@
+[
+  {
+    "model_name": "wildlife_detector_20250508_2314",
+    "created_at": "2025-05-08 23:46:40",
+    "training_time": 1796.7,
+    "epochs": 60
+  },
+  {
+    "model_name": "wildlife_detector_20250508_1957",
+    "created_at": "2025-05-08 22:41:25",
+    "training_time": 1915.51,
+    "epochs": 60
+  },
+  {
+    "model_name": "wildlife_detector_20250505_1800",
+    "created_at": "2025-05-05 18:45:43",
+    "training_time": 2130.04,
+    "epochs": 60
+  },
+  {
+    "model_name": "wildlife_detector_20250505_0921",
+    "created_at": "2025-05-05 09:28:36",
+    "training_time": 746.76,
+    "epochs": 16
+  },
+  {
+    "model_name": "wildlife_detector_20250503_1345",
+    "created_at": "2025-05-05 09:16:43",
+    "training_time": 1459.06,
+    "epochs": 100
+  },
+  {
+    "model_name": "wildlife_detector_20250503_1328",
+    "created_at": "2025-05-03 13:29:09",
+    "training_time": 581.646,
+    "epochs": 32
+  },
+  {
+    "model_name": "wildlife_detector_improved3",
+    "created_at": "2025-04-22 17:34:29",
+    "training_time": 424.522,
+    "epochs": 100
+  },
+  {
+    "model_name": "wildlife_detector_improved2",
+    "created_at": "2025-04-22 17:13:42",
+    "training_time": 355.009,
+    "epochs": 94
+  },
+  {
+    "model_name": "wildlife_detector_improved",
+    "created_at": "2025-04-22 17:02:12",
+    "training_time": 227.981,
+    "epochs": 63
+  },
+  {
+    "model_name": "wildlife_detector3",
+    "created_at": "2025-04-21 09:48:12",
+    "training_time": 292.524,
+    "epochs": 100
+  },
+  {
+    "model_name": "wildlife_detector2",
+    "created_at": "2025-04-20 17:40:23",
+    "training_time": 298.957,
+    "epochs": 88
+  },
+  {
+    "model_name": "wildlife_detector",
+    "created_at": "2025-04-20 17:30:52",
+    "training_time": 34.61,
+    "epochs": 2
+  }
+]
