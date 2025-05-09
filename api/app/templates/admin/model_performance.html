@@ -1,4 +1,20 @@
 {% extends 'admin/master.html' %}
+{% block head %}
+    {{ super() }}
+    <!-- Load Chart.js in the head section to ensure it's available before your code runs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .alert {
+            margin-top: 10px;
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
 <div class="container-fluid">
     <h1>Model Performance Dashboard</h1>
@@ -388,11 +404,16 @@
     </div>
 </div>
 
-<!-- Include Chart.js for visualizations -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script>
     // Fetch model performance data when the page loads
     document.addEventListener('DOMContentLoaded', function() {
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            document.getElementById('loading-message').innerHTML = 
+                '<div class="alert alert-danger"><strong>Error:</strong> Chart.js library is not loaded. Please check your internet connection or try refreshing the page.</div>';
+            return;
+        }
+        
         fetchModelPerformance();
     });
     
@@ -409,37 +430,65 @@
                 document.getElementById('summary-section').style.display = 'block';
                 document.getElementById('main-content').style.display = 'block';
                 
-                // Update summary cards
-                updateSummaryCards(data.model_details, data.performance_metrics, data.detection_stats);
-                
-                // Populate model details
-                populateModelDetails(data.model_details);
-                
-                // Populate performance metrics
-                populatePerformanceMetrics(data.performance_metrics);
-                
-                // Populate detection stats
-                populateDetectionStats(data.detection_stats);
-                
-                // Create confusion matrix
-                createConfusionMatrix(data.confusion_matrix);
-                
-                // Populate improvement opportunities
-                populateImprovementOpportunities(data.improvement_opportunities);
-                
-                // Create training history chart
-                if (data.training_history) {
-                    createPerformanceHistoryChart(data.training_history);
+                // Update all sections with try-catch blocks to isolate errors
+                try {
+                    updateSummaryCards(data.model_details, data.performance_metrics, data.detection_stats);
+                } catch (e) {
+                    console.error("Error updating summary cards:", e);
                 }
                 
-                // Create threshold analysis chart
-                if (data.performance_metrics && data.performance_metrics.thresholds) {
-                    createThresholdAnalysisChart(data.performance_metrics.thresholds);
+                try {
+                    populateModelDetails(data.model_details);
+                } catch (e) {
+                    console.error("Error populating model details:", e);
                 }
                 
-                // Create taxonomic group chart if available
-                if (data.improvement_opportunities && data.improvement_opportunities.taxonomic_group_performance) {
-                    createTaxonomicGroupChart(data.improvement_opportunities.taxonomic_group_performance);
+                try {
+                    populatePerformanceMetrics(data.performance_metrics);
+                } catch (e) {
+                    console.error("Error populating performance metrics:", e);
+                }
+                
+                try {
+                    populateDetectionStats(data.detection_stats);
+                } catch (e) {
+                    console.error("Error populating detection stats:", e);
+                }
+                
+                try {
+                    createConfusionMatrix(data.confusion_matrix);
+                } catch (e) {
+                    console.error("Error creating confusion matrix:", e);
+                }
+                
+                try {
+                    populateImprovementOpportunities(data.improvement_opportunities);
+                } catch (e) {
+                    console.error("Error populating improvement opportunities:", e);
+                }
+                
+                try {
+                    if (data.training_history) {
+                        createPerformanceHistoryChart(data.training_history);
+                    }
+                } catch (e) {
+                    console.error("Error creating performance history chart:", e);
+                }
+                
+                try {
+                    if (data.performance_metrics && data.performance_metrics.thresholds) {
+                        createThresholdAnalysisChart(data.performance_metrics.thresholds);
+                    }
+                } catch (e) {
+                    console.error("Error creating threshold analysis chart:", e);
+                }
+                
+                try {
+                    if (data.improvement_opportunities && data.improvement_opportunities.taxonomic_group_performance) {
+                        createTaxonomicGroupChart(data.improvement_opportunities.taxonomic_group_performance);
+                    }
+                } catch (e) {
+                    console.error("Error creating taxonomic group chart:", e);
                 }
             } else {
                 document.getElementById('loading-message').innerHTML = '<div class="alert alert-danger"><strong>Error:</strong> ' + data.message + '</div>';
@@ -524,37 +573,556 @@
     }
     
     function populatePerformanceMetrics(metrics) {
-        if (!metrics) {
-            document.getElementById('performance-metrics-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Performance Metrics</h3></div><div class="panel-body">No performance metrics available. Have you trained a model yet?</div></div>';
-            return;
+        try {
+            if (!metrics) {
+                document.getElementById('per-class-chart').parentNode.innerHTML = '<div class="alert alert-warning">No performance metrics available. Have you trained a model yet?</div>';
+                return;
+            }
+            
+            // Create per-class performance chart if data available
+            if (metrics.per_class && Object.keys(metrics.per_class).length > 0) {
+                const ctx = document.getElementById('per-class-chart').getContext('2d');
+                
+                // Limit to top 15 classes if there are too many
+                const allLabels = Object.keys(metrics.per_class);
+                const labels = allLabels.length > 15 ? allLabels.slice(0, 15) : allLabels;
+                
+                // Safely extract precision and recall data
+                const precisionData = labels.map(label => {
+                    const classMetrics = metrics.per_class[label] || {};
+                    return (classMetrics.precision || 0) * 100;
+                });
+                
+                const recallData = labels.map(label => {
+                    const classMetrics = metrics.per_class[label] || {};
+                    return (classMetrics.recall || 0) * 100;
+                });
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Precision',
+                                data: precisionData,
+                                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                                borderColor: 'rgba(52, 152, 219, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Recall',
+                                data: recallData,
+                                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                                borderColor: 'rgba(46, 204, 113, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Per-Class Performance' + (allLabels.length > 15 ? ' (Top 15 Classes)' : '')
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.dataset.label || '';
+                                        const value = context.parsed.y || 0;
+                                        return `${label}: ${value.toFixed(1)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Percentage (%)'
+                                },
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Can't use innerHTML directly on canvas
+                const container = document.getElementById('per-class-chart').parentNode;
+                container.innerHTML = '<div class="alert alert-warning">No per-class metrics available.</div>';
+            }
+        } catch (error) {
+            console.error('Error creating per-class chart:', error);
+            const container = document.getElementById('per-class-chart').parentNode;
+            container.innerHTML = '<div class="alert alert-danger">Error creating per-class chart: ' + error.message + '</div>';
         }
-        
-        // Create per-class performance chart if data available
-        if (metrics.per_class && Object.keys(metrics.per_class).length > 0) {
-            const ctx = document.getElementById('per-class-chart').getContext('2d');
+    }
+    
+    function populateDetectionStats(stats) {
+        try {
+            if (!stats) {
+                document.getElementById('detection-stats-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Detection Statistics</h3></div><div class="panel-body">No detection statistics available.</div></div>';
+                return;
+            }
             
-            const labels = Object.keys(metrics.per_class);
-            const precisionData = labels.map(label => metrics.per_class[label].precision * 100);
-            const recallData = labels.map(label => metrics.per_class[label].recall * 100);
+            document.getElementById('total-recent').textContent = stats.total_recent || 0;
+            document.getElementById('verified-count').textContent = stats.verified_count || 0;
+            document.getElementById('correction-rate').textContent = (stats.correction_rate || 0).toFixed(1) + '%';
             
+            // Create correction chart if data available
+            if (stats.species_corrections && Object.keys(stats.species_corrections).length > 0) {
+                const ctx = document.getElementById('correction-chart').getContext('2d');
+                
+                try {
+                    // Sort by correction rate descending
+                    const sortedSpecies = Object.entries(stats.species_corrections)
+                        .filter(([_, stats]) => stats && typeof stats === 'object') // Filter out invalid entries
+                        .sort((a, b) => {
+                            const rateA = a[1].correction_rate || 0;
+                            const rateB = b[1].correction_rate || 0;
+                            return rateB - rateA;
+                        })
+                        .slice(0, 10); // Top 10
+                    
+                    if (sortedSpecies.length > 0) {
+                        const labels = sortedSpecies.map(item => item[0]);
+                        const correctionRates = sortedSpecies.map(item => item[1].correction_rate || 0);
+                        
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: 'Correction Rate (%)',
+                                        data: correctionRates,
+                                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                                        borderColor: 'rgba(231, 76, 60, 1)',
+                                        borderWidth: 1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Top Species Requiring Corrections'
+                                    },
+                                    legend: {
+                                        position: 'top',
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return `Correction Rate: ${context.parsed.y.toFixed(1)}%`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Correction Rate (%)'
+                                        },
+                                        max: 100
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        // No valid correction data
+                        const container = document.getElementById('correction-chart').parentNode;
+                        container.innerHTML = '<div class="alert alert-warning">No correction data available.</div>';
+                    }
+                } catch (error) {
+                    console.error('Error creating correction chart:', error);
+                    const container = document.getElementById('correction-chart').parentNode;
+                    container.innerHTML = '<div class="alert alert-danger">Error creating correction chart: ' + error.message + '</div>';
+                }
+            } else {
+                // Can't use innerHTML directly on canvas
+                const container = document.getElementById('correction-chart').parentNode;
+                container.innerHTML = '<div class="alert alert-warning">No correction data available.</div>';
+            }
+        } catch (error) {
+            console.error('Error populating detection stats:', error);
+            document.getElementById('detection-stats-section').innerHTML = 
+                `<div class="panel panel-danger">
+                    <div class="panel-heading"><h3 class="panel-title">Detection Statistics</h3></div>
+                    <div class="panel-body">Error populating detection stats: ${error.message}</div>
+                </div>`;
+        }
+    }
+    
+    function createConfusionMatrix(data) {
+        try {
+            if (!data || !data.matrix || !data.class_names) {
+                document.getElementById('confusion-matrix-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Confusion Matrix</h3></div><div class="panel-body">No confusion matrix data available.</div></div>';
+                return;
+            }
+            
+            // Log the data to help with debugging
+            console.log('Confusion matrix data:', data);
+            
+            // Create confusion matrix visualization
+            const ctx = document.getElementById('confusion-matrix-chart').getContext('2d');
+            
+            // Limit to at most 15 classes to avoid overcrowding
+            let classNames = data.class_names;
+            let matrix = data.matrix;
+            
+            if (classNames.length > 15) {
+                // Keep only the first 15 classes
+                classNames = classNames.slice(0, 15);
+                matrix = matrix.slice(0, 15).map(row => row.slice(0, 15));
+                console.log('Limiting confusion matrix to 15 classes for better visualization');
+            }
+            
+            // Use Chart.js matrix with heatmap - with safer data handling
+            const matrixData = [];
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    matrixData.push({
+                        x: classNames[j],
+                        y: classNames[i],
+                        v: matrix[i][j]
+                    });
+                }
+            }
+            
+            // Find max value for color scaling
+            const maxValue = Math.max(...matrix.flat().filter(v => !isNaN(v) && v !== undefined && v !== null));
+            
+            // Create custom chart with safer callbacks
             new Chart(ctx, {
-                type: 'bar',
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Confusion Matrix',
+                            data: matrixData,
+                            backgroundColor: function(context) {
+                                // Safely access the data
+                                if (!context.raw) return 'rgba(52, 152, 219, 0.2)';
+                                const value = context.raw.v || 0;
+                                const alpha = maxValue > 0 ? value / maxValue : 0.1;
+                                return `rgba(52, 152, 219, ${alpha})`;
+                            },
+                            pointRadius: function(context) {
+                                // Safely access the data
+                                if (!context.raw) return 5;
+                                const value = context.raw.v || 0;
+                                return maxValue > 0 ? 5 + 15 * (value / maxValue) : 5;
+                            },
+                            pointHoverRadius: function(context) {
+                                // Safely access the data
+                                if (!context.raw) return 5;
+                                return (context.raw.v || 0) > 0 ? 15 : 5;
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    // Safely access the data
+                                    if (!context.raw) return 'No data';
+                                    const dataPoint = context.raw;
+                                    return `Predicted: ${dataPoint.x || 'Unknown'}, Actual: ${dataPoint.y || 'Unknown'}, Count: ${dataPoint.v || 0}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Confusion Matrix (Predicted vs. Actual)' + 
+                                  (data.class_names.length > 15 ? ' (First 15 Classes)' : '')
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Predicted'
+                            }
+                        },
+                        y: {
+                            type: 'category',
+                            title: {
+                                display: true,
+                                text: 'Actual'
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error creating confusion matrix:', error);
+            document.getElementById('confusion-matrix-section').innerHTML = 
+                `<div class="panel panel-danger">
+                    <div class="panel-heading"><h3 class="panel-title">Confusion Matrix</h3></div>
+                    <div class="panel-body">Error creating confusion matrix: ${error.message}</div>
+                </div>`;
+        }
+    }
+    
+    function populateImprovementOpportunities(data) {
+        try {
+            if (!data) {
+                document.getElementById('improvement-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Improvement Opportunities</h3></div><div class="panel-body">No improvement data available.</div></div>';
+                return;
+            }
+            
+            // Populate suggestions list
+            const suggestionsList = document.getElementById('suggestions-list');
+            suggestionsList.innerHTML = '';
+            
+            if (data.improvement_suggestions && data.improvement_suggestions.length > 0) {
+                data.improvement_suggestions.forEach(suggestion => {
+                    if (suggestion) {  // Check if suggestion is not null or empty
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.innerHTML = suggestion;
+                        suggestionsList.appendChild(li);
+                    }
+                });
+            } else {
+                suggestionsList.innerHTML = '<li class="list-group-item">No specific improvement suggestions available.</li>';
+            }
+            
+            // Populate underrepresented species table
+            const underrepresentedTable = document.getElementById('underrepresented-table').querySelector('tbody');
+            underrepresentedTable.innerHTML = '';
+            
+            if (data.underrepresented_species && Object.keys(data.underrepresented_species).length > 0) {
+                // Sort by count ascending
+                const sortedSpecies = Object.entries(data.underrepresented_species)
+                    .filter(([_, count]) => !isNaN(count))  // Filter out invalid counts
+                    .sort((a, b) => a[1] - b[1]);
+                
+                sortedSpecies.forEach(([species, count]) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${species}</td><td>${count}</td>`;
+                    underrepresentedTable.appendChild(row);
+                });
+            } else {
+                underrepresentedTable.innerHTML = '<tr><td colspan="2" class="text-center">No underrepresented species found</td></tr>';
+            }
+            
+            // Populate problem species table
+            const problemTable = document.getElementById('problem-table').querySelector('tbody');
+            problemTable.innerHTML = '';
+            
+            if (data.problem_species && Object.keys(data.problem_species).length > 0) {
+                // Sort by correction rate descending
+                const sortedProblems = Object.entries(data.problem_species)
+                    .filter(([_, rate]) => !isNaN(rate))  // Filter out invalid rates
+                    .sort((a, b) => b[1] - a[1]);
+                
+                sortedProblems.forEach(([species, rate]) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${species}</td><td>${rate.toFixed(1)}%</td>`;
+                    problemTable.appendChild(row);
+                });
+            } else {
+                problemTable.innerHTML = '<tr><td colspan="2" class="text-center">No problem species found</td></tr>';
+            }
+        } catch (error) {
+            console.error('Error populating improvement opportunities:', error);
+            document.getElementById('improvement-section').innerHTML = 
+                `<div class="panel panel-danger">
+                    <div class="panel-heading"><h3 class="panel-title">Improvement Opportunities</h3></div>
+                    <div class="panel-body">Error populating improvement data: ${error.message}</div>
+                </div>`;
+        }
+    }
+    
+    // Function to create a taxonomic group performance chart
+    function createTaxonomicGroupChart(taxonomicData) {
+        try {
+            if (!taxonomicData || Object.keys(taxonomicData).length === 0) {
+                const container = document.getElementById('taxonomic-chart').parentNode;
+                container.innerHTML = '<div class="alert alert-warning">No taxonomic group data available</div>';
+                return;
+            }
+            
+            const ctx = document.getElementById('taxonomic-chart').getContext('2d');
+            
+            // Extract data for the chart
+            const labels = Object.keys(taxonomicData);
+            
+            // Safely extract data with fallbacks
+            const precisionData = labels.map(group => {
+                const groupData = taxonomicData[group] || {};
+                return (groupData.precision || 0) * 100;
+            });
+            
+            const recallData = labels.map(group => {
+                const groupData = taxonomicData[group] || {};
+                return (groupData.recall || 0) * 100;
+            });
+            
+            const mapData = labels.map(group => {
+                const groupData = taxonomicData[group] || {};
+                return (groupData.map50 || 0) * 100;
+            });
+            
+            // Create chart
+            new Chart(ctx, {
+                type: 'radar',
                 data: {
                     labels: labels,
                     datasets: [
                         {
                             label: 'Precision',
                             data: precisionData,
-                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
                             borderColor: 'rgba(52, 152, 219, 1)',
-                            borderWidth: 1
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(52, 152, 219, 1)'
                         },
                         {
                             label: 'Recall',
                             data: recallData,
-                            backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)',
                             borderColor: 'rgba(46, 204, 113, 1)',
-                            borderWidth: 1
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(46, 204, 113, 1)'
+                        },
+                        {
+                            label: 'mAP@0.5',
+                            data: mapData,
+                            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                            borderColor: 'rgba(243, 156, 18, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(243, 156, 18, 1)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add details table
+            let detailsHtml = '<table class="table table-striped table-condensed">';
+            detailsHtml += '<thead><tr><th>Group</th><th>Precision</th><th>Recall</th><th>mAP@0.5</th><th>Species Count</th></tr></thead>';
+            detailsHtml += '<tbody>';
+            
+            for (const group of labels) {
+                const data = taxonomicData[group] || {};
+                const precision = (data.precision || 0) * 100;
+                const recall = (data.recall || 0) * 100;
+                const map50 = (data.map50 || 0) * 100;
+                const speciesCount = data.species ? data.species.length : 0;
+                
+                detailsHtml += `<tr>
+                    <td>${group}</td>
+                    <td>${precision.toFixed(1)}%</td>
+                    <td>${recall.toFixed(1)}%</td>
+                    <td>${map50.toFixed(1)}%</td>
+                    <td>${speciesCount}</td>
+                </tr>`;
+            }
+            
+            detailsHtml += '</tbody></table>';
+            document.getElementById('taxonomic-details').innerHTML = detailsHtml;
+        } catch (error) {
+            console.error('Error creating taxonomic group chart:', error);
+            const container = document.getElementById('taxonomic-chart').parentNode;
+            container.innerHTML = `<div class="alert alert-danger">Error creating taxonomic chart: ${error.message}</div>`;
+        }
+    }
+    
+    function createPerformanceHistoryChart(history) {
+        try {
+            if (!history || !history.epoch || history.epoch.length === 0) {
+                return;
+            }
+            
+            const ctx = document.getElementById('training-history-chart').getContext('2d');
+            
+            // Safely handle the data - use empty arrays if data is missing
+            const epochs = history.epoch || [];
+            
+            // Try different possible property names for metrics
+            const precision = history.precision || history.Precision || [];
+            const recall = history.recall || history.Recall || [];
+            const map50 = history.mAP50 || history.mAP_0_5 || history['mAP_0.5'] || history.map50 || [];
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: epochs,
+                    datasets: [
+                        {
+                            label: 'Precision',
+                            data: precision,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Recall',
+                            data: recall,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'mAP@0.5',
+                            data: map50,
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
                         }
                     ]
                 },
@@ -564,535 +1132,211 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Per-Class Performance'
+                            text: 'Training History'
                         },
-                        legend: {
-                            position: 'top',
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y || 0;
+                                    return `${label}: ${value.toFixed(3)}`;
+                                }
+                            }
                         }
                     },
                     scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Epoch'
+                            }
+                        },
                         y: {
-                            beginAtZero: true,
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            },
+                            min: 0,
+                            max: 1
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error creating performance history chart:', error);
+            const container = document.getElementById('training-history-chart').parentNode;
+            container.innerHTML = `<div class="alert alert-danger">Error creating training history chart: ${error.message}</div>`;
+        }
+    }
+    
+    function createThresholdAnalysisChart(thresholds) {
+        try {
+            if (!thresholds || !Array.isArray(thresholds) || thresholds.length === 0) {
+                return;
+            }
+            
+            const ctx = document.getElementById('threshold-analysis-chart').getContext('2d');
+            
+            // Create threshold labels, sorted by threshold value
+            const sortedThresholds = [...thresholds].sort((a, b) => a.threshold - b.threshold);
+            
+            const thresholdLabels = sortedThresholds.map(t => (t.threshold || 0).toFixed(2));
+            
+            // Safely extract metric data with fallbacks
+            const precisionData = sortedThresholds.map(t => (t.precision || 0) * 100);
+            const recallData = sortedThresholds.map(t => (t.recall || 0) * 100);
+            const mAPData = sortedThresholds.map(t => (t.mAP50 || 0) * 100);
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: thresholdLabels,
+                    datasets: [
+                        {
+                            label: 'Precision',
+                            data: precisionData,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Recall',
+                            data: recallData,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'mAP@0.5',
+                            data: mAPData,
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Performance at Different Confidence Thresholds'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y || 0;
+                                    return `${label}: ${value.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Confidence Threshold'
+                            }
+                        },
+                        y: {
+                            display: true,
                             title: {
                                 display: true,
                                 text: 'Percentage (%)'
                             },
+                            min: 0,
                             max: 100
                         }
                     }
                 }
             });
-        } else {
-            document.getElementById('per-class-chart').innerHTML = '<div class="alert alert-warning">No per-class metrics available.</div>';
+        } catch (error) {
+            console.error('Error creating threshold analysis chart:', error);
+            const container = document.getElementById('threshold-analysis-chart').parentNode;
+            container.innerHTML = `<div class="alert alert-danger">Error creating threshold analysis chart: ${error.message}</div>`;
         }
-    }
-    
-    function populateDetectionStats(stats) {
-        if (!stats) {
-            document.getElementById('detection-stats-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Detection Statistics</h3></div><div class="panel-body">No detection statistics available.</div></div>';
-            return;
-        }
-        
-        document.getElementById('total-recent').textContent = stats.total_recent;
-        document.getElementById('verified-count').textContent = stats.verified_count;
-        document.getElementById('correction-rate').textContent = stats.correction_rate.toFixed(1) + '%';
-        
-        // Create correction chart if data available
-        if (stats.species_corrections && Object.keys(stats.species_corrections).length > 0) {
-            const ctx = document.getElementById('correction-chart').getContext('2d');
-            
-            // Sort by correction rate descending
-            const sortedSpecies = Object.entries(stats.species_corrections)
-                .sort((a, b) => b[1].correction_rate - a[1].correction_rate)
-                .slice(0, 10); // Top 10
-            
-            const labels = sortedSpecies.map(item => item[0]);
-            const correctionRates = sortedSpecies.map(item => item[1].correction_rate);
-            
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Correction Rate (%)',
-                            data: correctionRates,
-                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                            borderColor: 'rgba(231, 76, 60, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Top Species Requiring Corrections'
-                        },
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Correction Rate (%)'
-                            },
-                            max: 100
-                        }
-                    }
-                }
-            });
-        } else {
-            document.getElementById('correction-chart').innerHTML = '<div class="alert alert-warning">No correction data available.</div>';
-        }
-    }
-    
-    function createConfusionMatrix(data) {
-        if (!data || !data.matrix || !data.class_names) {
-            document.getElementById('confusion-matrix-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Confusion Matrix</h3></div><div class="panel-body">No confusion matrix data available.</div></div>';
-            return;
-        }
-        
-        // Create confusion matrix visualization
-        const ctx = document.getElementById('confusion-matrix-chart').getContext('2d');
-        
-        // Use Chart.js matrix with heatmap
-        const matrixData = [];
-        for (let i = 0; i < data.matrix.length; i++) {
-            for (let j = 0; j < data.matrix[i].length; j++) {
-                matrixData.push({
-                    x: data.class_names[j],
-                    y: data.class_names[i],
-                    v: data.matrix[i][j]
-                });
-            }
-        }
-        
-        // Create custom chart
-        new Chart(ctx, {
-            type: 'scatter',
-            data: {
-                datasets: [
-                    {
-                        label: 'Confusion Matrix',
-                        data: matrixData,
-                        backgroundColor: function(context) {
-                            const value = context.raw.v;
-                            const maxValue = Math.max(...data.matrix.flat());
-                            const alpha = value / maxValue;
-                            return `rgba(52, 152, 219, ${alpha})`;
-                        },
-                        pointRadius: function(context) {
-                            const value = context.raw.v;
-                            const maxValue = Math.max(...data.matrix.flat());
-                            return 10 + 20 * (value / maxValue);
-                        },
-                        pointHoverRadius: function(context) {
-                            return context.raw.v > 0 ? 15 : 0;
-                        }
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const dataPoint = context.raw;
-                                return `Predicted: ${dataPoint.x}, Actual: ${dataPoint.y}, Count: ${dataPoint.v}`;
-                            }
-                        }
-                    },
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Confusion Matrix (Predicted vs. Actual)'
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'category',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: 'Predicted'
-                        }
-                    },
-                    y: {
-                        type: 'category',
-                        title: {
-                            display: true,
-                            text: 'Actual'
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    function populateImprovementOpportunities(data) {
-        if (!data) {
-            document.getElementById('improvement-section').innerHTML = '<div class="panel panel-danger"><div class="panel-heading"><h3 class="panel-title">Improvement Opportunities</h3></div><div class="panel-body">No improvement data available.</div></div>';
-            return;
-        }
-        
-        // Populate suggestions list
-        const suggestionsList = document.getElementById('suggestions-list');
-        suggestionsList.innerHTML = '';
-        
-        if (data.improvement_suggestions && data.improvement_suggestions.length > 0) {
-            data.improvement_suggestions.forEach(suggestion => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item';
-                li.innerHTML = suggestion;
-                suggestionsList.appendChild(li);
-            });
-        } else {
-            suggestionsList.innerHTML = '<li class="list-group-item">No specific improvement suggestions available.</li>';
-        }
-        
-        // Populate underrepresented species table
-        const underrepresentedTable = document.getElementById('underrepresented-table').querySelector('tbody');
-        underrepresentedTable.innerHTML = '';
-        
-        if (data.underrepresented_species && Object.keys(data.underrepresented_species).length > 0) {
-            // Sort by count ascending
-            const sortedSpecies = Object.entries(data.underrepresented_species).sort((a, b) => a[1] - b[1]);
-            
-            sortedSpecies.forEach(([species, count]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${species}</td><td>${count}</td>`;
-                underrepresentedTable.appendChild(row);
-            });
-        } else {
-            underrepresentedTable.innerHTML = '<tr><td colspan="2" class="text-center">No underrepresented species found</td></tr>';
-        }
-        
-        // Populate problem species table
-        const problemTable = document.getElementById('problem-table').querySelector('tbody');
-        problemTable.innerHTML = '';
-        
-        if (data.problem_species && Object.keys(data.problem_species).length > 0) {
-            // Sort by correction rate descending
-            const sortedProblems = Object.entries(data.problem_species).sort((a, b) => b[1] - a[1]);
-            
-            sortedProblems.forEach(([species, rate]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${species}</td><td>${rate.toFixed(1)}%</td>`;
-                problemTable.appendChild(row);
-            });
-        } else {
-            problemTable.innerHTML = '<tr><td colspan="2" class="text-center">No problem species found</td></tr>';
-        }
-    }
-    
-    // Function to create a taxonomic group performance chart
-    function createTaxonomicGroupChart(taxonomicData) {
-        if (!taxonomicData || Object.keys(taxonomicData).length === 0) {
-            document.getElementById('taxonomic-chart').innerHTML = '<div class="alert alert-warning">No taxonomic group data available</div>';
-            return;
-        }
-        
-        const ctx = document.getElementById('taxonomic-chart').getContext('2d');
-        
-        // Extract data for the chart
-        const labels = Object.keys(taxonomicData);
-        const precisionData = labels.map(group => taxonomicData[group].precision * 100);
-        const recallData = labels.map(group => taxonomicData[group].recall * 100);
-        const mapData = labels.map(group => taxonomicData[group].map50 * 100);
-        
-        // Create chart
-        new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Precision',
-                        data: precisionData,
-                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(52, 152, 219, 1)'
-                    },
-                    {
-                        label: 'Recall',
-                        data: recallData,
-                        backgroundColor: 'rgba(46, 204, 113, 0.2)',
-                        borderColor: 'rgba(46, 204, 113, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(46, 204, 113, 1)'
-                    },
-                    {
-                        label: 'mAP@0.5',
-                        data: mapData,
-                        backgroundColor: 'rgba(243, 156, 18, 0.2)',
-                        borderColor: 'rgba(243, 156, 18, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(243, 156, 18, 1)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 100
-                    }
-                }
-            }
-        });
-        
-        // Add details table
-        let detailsHtml = '<table class="table table-striped table-condensed">';
-        detailsHtml += '<thead><tr><th>Group</th><th>Precision</th><th>Recall</th><th>mAP@0.5</th><th>Species Count</th></tr></thead>';
-        detailsHtml += '<tbody>';
-        
-        for (const group of labels) {
-            const data = taxonomicData[group];
-            detailsHtml += `<tr>
-                <td>${group}</td>
-                <td>${(data.precision * 100).toFixed(1)}%</td>
-                <td>${(data.recall * 100).toFixed(1)}%</td>
-                <td>${(data.map50 * 100).toFixed(1)}%</td>
-                <td>${data.species ? data.species.length : 0}</td>
-            </tr>`;
-        }
-        
-        detailsHtml += '</tbody></table>';
-        document.getElementById('taxonomic-details').innerHTML = detailsHtml;
-    }
-    
-    function createPerformanceHistoryChart(history) {
-        if (!history || !history.epoch || history.epoch.length === 0) {
-            return;
-        }
-        
-        const ctx = document.getElementById('training-history-chart').getContext('2d');
-        
-        // Convert keys if necessary (sometimes the API returns with underscores, sometimes with dots)
-        const precision = history.precision || history.precision;
-        const recall = history.recall || history.recall;
-        const map50 = history.mAP_0_5 || history.mAP_0_5 || history['mAP_0.5'];
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: history.epoch,
-                datasets: [
-                    {
-                        label: 'Precision',
-                        data: precision,
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Recall',
-                        data: recall,
-                        borderColor: '#2ecc71',
-                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1
-                    },
-                    {
-                        label: 'mAP@0.5',
-                        data: map50,
-                        borderColor: '#f39c12',
-                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Training History'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Epoch'
-                        }
-                    },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Value'
-                        },
-                        min: 0,
-                        max: 1
-                    }
-                }
-            }
-        });
-    }
-    
-    function createThresholdAnalysisChart(thresholds) {
-        if (!thresholds || thresholds.length === 0) {
-            return;
-        }
-        
-        const ctx = document.getElementById('threshold-analysis-chart').getContext('2d');
-        
-        const thresholdLabels = thresholds.map(t => t.threshold.toFixed(2));
-        const precisionData = thresholds.map(t => t.precision * 100);
-        const recallData = thresholds.map(t => t.recall * 100);
-        const mAPData = thresholds.map(t => t.mAP50 * 100);
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: thresholdLabels,
-                datasets: [
-                    {
-                        label: 'Precision',
-                        data: precisionData,
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        borderWidth: 2,
-                        fill: false
-                    },
-                    {
-                        label: 'Recall',
-                        data: recallData,
-                        borderColor: '#2ecc71',
-                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                        borderWidth: 2,
-                        fill: false
-                    },
-                    {
-                        label: 'mAP@0.5',
-                        data: mAPData,
-                        borderColor: '#f39c12',
-                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                        borderWidth: 2,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Performance at Different Confidence Thresholds'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Confidence Threshold'
-                        }
-                    },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Percentage (%)'
-                        },
-                        min: 0,
-                        max: 100
-                    }
-                }
-            }
-        });
     }
     
     // Function to update summary cards with key metrics
     function updateSummaryCards(modelDetails, performanceMetrics, detectionStats) {
-        // Update overall performance card
-        if (performanceMetrics) {
-            document.getElementById('summary-map50').textContent = (performanceMetrics.mAP50 * 100).toFixed(1) + '%';
-            document.getElementById('summary-precision').textContent = (performanceMetrics.precision * 100).toFixed(1) + '%';
-            document.getElementById('summary-recall').textContent = (performanceMetrics.recall * 100).toFixed(1) + '%';
-            
-            // Calculate F1 score
-            const precision = performanceMetrics.precision;
-            const recall = performanceMetrics.recall;
-            const f1 = precision && recall ? (2 * precision * recall / (precision + recall)).toFixed(2) : 'N/A';
-            document.getElementById('summary-f1').textContent = f1 === 'N/A' ? f1 : (f1 * 100).toFixed(1) + '%';
-        }
-        
-        // Update model info card
-        if (modelDetails) {
-            document.getElementById('summary-name').textContent = modelDetails.model_name || 'N/A';
-            document.getElementById('summary-type').textContent = modelDetails.model_type || 'YOLOv8';
-            document.getElementById('summary-date').textContent = modelDetails.created_at || 'N/A';
-            document.getElementById('summary-classes').textContent = performanceMetrics?.classes || 'N/A';
-        }
-        
-        // Update detection statistics card
-        if (detectionStats) {
-            document.getElementById('summary-detections').textContent = detectionStats.total_recent || 0;
-            
-            const verifiedRate = detectionStats.total_recent > 0 
-                ? ((detectionStats.verified_count / detectionStats.total_recent) * 100).toFixed(1) + '%' 
-                : 'N/A';
-            document.getElementById('summary-verified-rate').textContent = verifiedRate;
-            
-            document.getElementById('summary-correction-rate').textContent = 
-                detectionStats.correction_rate.toFixed(1) + '%';
-            
-            // Get top problem species
-            if (detectionStats.species_corrections) {
-                const problems = Object.entries(detectionStats.species_corrections)
-                    .filter(([_, stats]) => stats.correction_rate > 20)
-                    .map(([species, _]) => species)
-                    .slice(0, 3);
+        try {
+            // Update overall performance card
+            if (performanceMetrics) {
+                const map50 = performanceMetrics.mAP50 || 0;
+                const precision = performanceMetrics.precision || 0;
+                const recall = performanceMetrics.recall || 0;
                 
-                document.getElementById('summary-problems').textContent = 
-                    problems.length > 0 ? problems.join(', ') : 'None';
+                document.getElementById('summary-map50').textContent = (map50 * 100).toFixed(1) + '%';
+                document.getElementById('summary-precision').textContent = (precision * 100).toFixed(1) + '%';
+                document.getElementById('summary-recall').textContent = (recall * 100).toFixed(1) + '%';
+                
+                // Calculate F1 score
+                const f1 = precision && recall ? (2 * precision * recall / (precision + recall)) : 0;
+                document.getElementById('summary-f1').textContent = (f1 * 100).toFixed(1) + '%';
             }
-        }
-        
-        // Update training summary card
-        if (performanceMetrics && modelDetails && modelDetails.config) {
-            document.getElementById('summary-epochs').textContent = 
-                performanceMetrics.training_epochs || modelDetails.config.epochs || 'N/A';
-            document.getElementById('summary-best-epoch').textContent = 
-                performanceMetrics.best_epoch || 'N/A';
-            document.getElementById('summary-img-size').textContent = 
-                modelDetails.image_size || modelDetails.config.imgsz || 'N/A';
-            document.getElementById('summary-batch').textContent = 
-                modelDetails.config.batch || 'N/A';
+            
+            // Update model info card
+            if (modelDetails) {
+                document.getElementById('summary-name').textContent = modelDetails.model_name || 'N/A';
+                document.getElementById('summary-type').textContent = modelDetails.model_type || 'YOLOv8';
+                document.getElementById('summary-date').textContent = modelDetails.created_at || 'N/A';
+                document.getElementById('summary-classes').textContent = performanceMetrics?.classes || 
+                    (performanceMetrics?.per_class ? Object.keys(performanceMetrics.per_class).length : 'N/A');
+            }
+            
+            // Update detection statistics card
+            if (detectionStats) {
+                document.getElementById('summary-detections').textContent = detectionStats.total_recent || 0;
+                
+                const verifiedRate = detectionStats.total_recent > 0 
+                    ? ((detectionStats.verified_count / detectionStats.total_recent) * 100).toFixed(1) + '%' 
+                    : 'N/A';
+                document.getElementById('summary-verified-rate').textContent = verifiedRate;
+                
+                document.getElementById('summary-correction-rate').textContent = 
+                    (detectionStats.correction_rate || 0).toFixed(1) + '%';
+                
+                // Get top problem species
+                if (detectionStats.species_corrections && Object.keys(detectionStats.species_corrections).length > 0) {
+                    const problems = Object.entries(detectionStats.species_corrections)
+                        .filter(([_, stats]) => stats && stats.correction_rate > 20)
+                        .map(([species, _]) => species)
+                        .slice(0, 3);
+                    
+                    document.getElementById('summary-problems').textContent = 
+                        problems.length > 0 ? problems.join(', ') : 'None';
+                } else {
+                    document.getElementById('summary-problems').textContent = 'None';
+                }
+            }
+            
+            // Update training summary card
+            if (performanceMetrics && modelDetails) {
+                const config = modelDetails.config || {};
+                
+                document.getElementById('summary-epochs').textContent = 
+                    performanceMetrics.training_epochs || config.epochs || 'N/A';
+                document.getElementById('summary-best-epoch').textContent = 
+                    performanceMetrics.best_epoch || 'N/A';
+                document.getElementById('summary-img-size').textContent = 
+                    modelDetails.image_size || config.imgsz || 'N/A';
+                document.getElementById('summary-batch').textContent = 
+                    config.batch || 'N/A';
+            }
+        } catch (error) {
+            console.error('Error updating summary cards:', error);
         }
     }
 </script>
