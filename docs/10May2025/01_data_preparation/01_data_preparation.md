@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 import yaml
+import shutil
 
 # Data analysis
 import numpy as np
@@ -200,14 +201,13 @@ print(f"\nConfiguration saved to: {config_path}")
     ✅ export_dir directory exists: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export
     ✅ models_dir directory exists: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained
     ✅ reports_dir directory exists: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports
-    ❌ yolo_export directory does not exist: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0025
-    ❌ yolo_hierarchical_export directory does not exist: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0025
+    ❌ yolo_export directory does not exist: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038
+    ❌ yolo_hierarchical_export directory does not exist: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038
     
     YOLO dataset: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_default_20250429_085945
     ✅ YOLO dataset exists
-    Created directory: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config
     
-    Configuration saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/data_config_20250510_0025.json
+    Configuration saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/data_config_20250510_0038.json
 
 
 
@@ -400,8 +400,8 @@ else:
     Analyzing metadata from 20 random images...
     
     Image dimension statistics:
-    Width range: 3264 to 3264 pixels (avg: 3264.0)
-    Height range: 2448 to 2448 pixels (avg: 2448.0)
+    Width range: 3264 to 5632 pixels (avg: 3382.4)
+    Height range: 2448 to 4224 pixels (avg: 2536.8)
 
 
 
@@ -1067,13 +1067,13 @@ if AUGMENTATION_AVAILABLE:
     # Define different augmentation levels
     light_aug = A.Compose([
         A.RandomRotate90(),
-        A.Flip(),
+        A.HorizontalFlip(),  # Changed from A.Flip()
         A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2)
     ])
     
     medium_aug = A.Compose([
         A.RandomRotate90(),
-        A.Flip(),
+        A.HorizontalFlip(),  # Changed from A.Flip()
         A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3),
         A.HueSaturationValue(hue_shift_limit=15, sat_shift_limit=25, val_shift_limit=15),
         A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15)
@@ -1081,7 +1081,7 @@ if AUGMENTATION_AVAILABLE:
     
     strong_aug = A.Compose([
         A.RandomRotate90(),
-        A.Flip(),
+        A.HorizontalFlip(),  # Changed from A.Flip()
         A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3),
         A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20),
         A.GaussNoise(),
@@ -1173,19 +1173,21 @@ else:
     print("- mixup: 0.1    # Mixup augmentation (moderate)")
 ```
 
-    ⚠️ albumentations not installed. Basic augmentation will be used.
-       Install with: pip install albumentations
+    ✅ albumentations library is available for advanced augmentation
+
+
+    /tmp/ipykernel_9719/3741489288.py:45: UserWarning: Argument(s) 'var_limit' are not valid for transform GaussNoise
+      A.GaussNoise(var_limit=(10, 50))
+
+
+
     
-    YOLO built-in augmentation parameters:
-    - hsv_h: 0.015  # HSV Hue augmentation
-    - hsv_s: 0.7    # HSV Saturation augmentation (higher for wildlife)
-    - hsv_v: 0.4    # HSV Value augmentation (stronger for varying lighting)
-    - degrees: 10.0 # Rotation augmentation
-    - translate: 0.2  # Translation augmentation
-    - scale: 0.6    # Scale augmentation (stronger for wildlife detection)
-    - fliplr: 0.5   # Horizontal flip probability
-    - mosaic: 1.0   # Mosaic augmentation (keep at max)
-    - mixup: 0.1    # Mixup augmentation (moderate)
+![png](output_6_2.png)
+    
+
+
+    Augmentation strategies ready for use in YOLO export
+    Different augmentation strengths will be applied based on class balance.
 
 
 
@@ -1291,10 +1293,10 @@ else:
     print("Make sure the YOLO dataset analysis in Cell 4 completed successfully.")
 ```
 
-    Setting up standard YOLO export at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0025
-    YOLO export directories and configurations prepared at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0025
-    Setting up hierarchical YOLO export at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0025
-    YOLO export directories and configurations prepared at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0025
+    Setting up standard YOLO export at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038
+    YOLO export directories and configurations prepared at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038
+    Setting up hierarchical YOLO export at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038
+    YOLO export directories and configurations prepared at: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038
     Hierarchical mapping saved with 30 classes mapped to 5 groups
 
 
@@ -1537,38 +1539,22 @@ else:
     Augmentation will be applied to 11 underrepresented classes
     
     Executing standard YOLO export...
-
-
-
-    ---------------------------------------------------------------------------
-
-    NameError                                 Traceback (most recent call last)
-
-    Cell In[9], line 193
-        191 if 'standard_export_paths' in locals():
-        192     print("\nExecuting standard YOLO export...")
-    --> 193     standard_export_success = copy_yolo_dataset(
-        194         yolo_dataset_path,
-        195         standard_export_paths['base'],
-        196         apply_augmentation=(augment_classes is not None),
-        197         augment_classes=augment_classes
-        198     )
-        200     if standard_export_success:
-        201         print(f"Standard YOLO dataset export completed")
-
-
-    Cell In[9], line 42, in copy_yolo_dataset(source_dataset, target_dataset, apply_augmentation, augment_classes)
-         40 for img_file in os.listdir(source_train_images):
-         41     if img_file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-    ---> 42         shutil.copy2(
-         43             os.path.join(source_train_images, img_file),
-         44             os.path.join(target_train_images, img_file)
-         45         )
-         46         copied_counts['train_images'] += 1
-         48 # Copy labels
-
-
-    NameError: name 'shutil' is not defined
+    Copied files:
+    - Training images: 356
+    - Training labels: 356
+    - Validation images: 89
+    - Validation labels: 89
+    
+    Augmentation would be applied here for underrepresented classes
+    Standard YOLO dataset export completed
+    
+    Executing hierarchical YOLO export...
+    Copied files:
+    - Training images: 356
+    - Training labels: 356
+    - Validation images: 89
+    - Validation labels: 89
+    Hierarchical YOLO dataset export completed
 
 
 
@@ -1741,15 +1727,100 @@ print(f"Notebook data saved to: {notebook_data_path}")
 
     
     Generating report for Standard YOLO Export...
-    Export report saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0025/export_report.md
+    Export report saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/export_report.md
     
     Generating report for Hierarchical YOLO Export...
-    Export report saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0025/export_report.md
+    Export report saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/export_report.md
     
     Data preparation and export complete!
     The exported datasets are ready for model training.
     Please proceed to the model training notebook.
-    Notebook data saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/notebook_data_20250510_0025.json
+    Notebook data saved to: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/notebook_data_20250510_0038.json
+
+
+
+```python
+# Cell 11: Output Tracking for Long-Term Project Management
+# This cell creates a detailed record of all files generated by this notebook
+
+# Define the tracking file location
+tracking_dir = os.path.join(PROJECT_DIR, "tracking")
+os.makedirs(tracking_dir, exist_ok=True)
+
+# Collect all generated files and their purposes
+generated_files = {
+    "configuration": {
+        "data_config": config_path,
+        "notebook_data": notebook_data_path
+    },
+    "standard_dataset": {
+        "base_path": standard_export_paths['base'],
+        "data_yaml": os.path.join(standard_export_paths['base'], 'data.yaml'),
+        "classes_txt": os.path.join(standard_export_paths['base'], 'classes.txt'),
+        "report_md": os.path.join(standard_export_paths['base'], 'export_report.md'),
+        "report_json": os.path.join(standard_export_paths['base'], 'export_report.json')
+    },
+    "hierarchical_dataset": {
+        "base_path": hierarchical_export_paths['base'],
+        "data_yaml": os.path.join(hierarchical_export_paths['base'], 'data.yaml'),
+        "classes_txt": os.path.join(hierarchical_export_paths['base'], 'classes.txt'),
+        "mapping_json": os.path.join(hierarchical_export_paths['base'], 'hierarchical_mapping.json'), 
+        "report_md": os.path.join(hierarchical_export_paths['base'], 'export_report.md'),
+        "report_json": os.path.join(hierarchical_export_paths['base'], 'export_report.json')
+    }
+}
+
+# Create a comprehensive output tracking file
+tracking_file = os.path.join(tracking_dir, f"notebook1_outputs_{timestamp}.json")
+with open(tracking_file, 'w') as f:
+    json.dump({
+        "notebook": "01_data_preparation",
+        "execution_timestamp": timestamp,
+        "description": "Data preparation and YOLO export",
+        "generated_files": generated_files,
+        "next_steps": {
+            "notebook": "02_model_training.ipynb",
+            "required_inputs": [notebook_data_path]
+        }
+    }, f, indent=2)
+
+# Create a simple Markdown summary for human-readable reference
+summary_file = os.path.join(tracking_dir, f"notebook1_summary_{timestamp}.md")
+with open(summary_file, 'w') as f:
+    f.write(f"# Data Preparation Notebook Outputs\n\n")
+    f.write(f"**Execution Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+    
+    f.write(f"## Configuration Files\n\n")
+    f.write(f"- Data Config: `{config_path}`\n")
+    f.write(f"- Notebook Data: `{notebook_data_path}`\n\n")
+    
+    f.write(f"## Standard YOLO Dataset\n\n")
+    f.write(f"- Base Path: `{standard_export_paths['base']}`\n")
+    f.write(f"- Classes: {len(class_names)}\n")
+    f.write(f"- Training Images: {len(os.listdir(standard_export_paths['train_images']))}\n")
+    f.write(f"- Validation Images: {len(os.listdir(standard_export_paths['val_images']))}\n\n")
+    
+    f.write(f"## Hierarchical YOLO Dataset\n\n")
+    f.write(f"- Base Path: `{hierarchical_export_paths['base']}`\n")
+    f.write(f"- Groups: {len(list(taxonomic_groups.keys()))}\n")
+    f.write(f"- Training Images: {len(os.listdir(hierarchical_export_paths['train_images']))}\n")
+    f.write(f"- Validation Images: {len(os.listdir(hierarchical_export_paths['val_images']))}\n\n")
+    
+    f.write(f"## Next Steps\n\n")
+    f.write(f"Proceed to notebook 2 (Model Training) using the notebook data: `{os.path.basename(notebook_data_path)}`")
+
+print(f"\nOutput tracking files created:")
+print(f"- JSON tracking: {tracking_file}")
+print(f"- Markdown summary: {summary_file}")
+print(f"\nThese files document all outputs from this notebook for long-term project organization.")
+```
+
+    
+    Output tracking files created:
+    - JSON tracking: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/tracking/notebook1_outputs_20250510_0038.json
+    - Markdown summary: /home/peter/Desktop/TU PHD/WildlifeDetectionSystem/tracking/notebook1_summary_20250510_0038.md
+    
+    These files document all outputs from this notebook for long-term project organization.
 
 
 
