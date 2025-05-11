@@ -1,8 +1,9 @@
 {% extends 'admin/master.html' %}
 {% block head %}
     {{ super() }}
-    <!-- Load Chart.js in the head section to ensure it's available before your code runs -->
+    <!-- Load Chart.js and additional libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
     <style>
         .chart-container {
             position: relative;
@@ -12,12 +13,102 @@
         .alert {
             margin-top: 10px;
         }
+        .image-gallery img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .carousel-control {
+            background-image: none !important;
+        }
+        .carousel-indicators li {
+            background-color: #888;
+        }
+        .carousel-indicators .active {
+            background-color: #333;
+        }
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            padding: 15px;
+        }
+        .markdown-body h1, .markdown-body h2 {
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid #eaecef;
+        }
+        .markdown-body pre {
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: #f6f8fa;
+            border-radius: 3px;
+        }
+        .markdown-body code {
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: rgba(27,31,35,0.05);
+            border-radius: 3px;
+        }
+        .model-selector {
+            margin-bottom: 20px;
+        }
+        .validation-comparison {
+            margin-bottom: 20px;
+        }
+        .validation-comparison .side-by-side {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .validation-comparison .side-by-side > div {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
+        }
+        .performance-viz-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .performance-viz-container img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
     </style>
 {% endblock %}
 
 {% block body %}
 <div class="container-fluid">
     <h1>Model Performance Dashboard</h1>
+    
+    <!-- Model Selector -->
+    <div class="row model-selector">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="model-selector-dropdown">Select Model</label>
+                <select class="form-control" id="model-selector-dropdown" onchange="selectModel(this.value)">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-6 text-right">
+            <div class="form-group">
+                <label for="comparison-selector">Compare Models</label>
+                <select class="form-control" id="comparison-selector" onchange="toggleComparisonView(this.checked)">
+                    <option value="single">Single Model View</option>
+                    <option value="compare">Compare Models</option>
+                </select>
+            </div>
+        </div>
+    </div>
     
     <div class="row">
         <div class="col-md-12">
@@ -27,265 +118,309 @@
         </div>
     </div>
     
-    <!-- Summary Cards Row -->
-    <div id="summary-section" style="display:none;" class="row">
-        <div class="col-md-3">
-            <div class="panel panel-primary">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Overall Performance</h3>
-                </div>
-                <div class="panel-body text-center">
-                    <div class="row">
-                        <div class="col-xs-6">
-                            <div class="text-muted">mAP@0.5</div>
-                            <div class="h2" id="summary-map50"></div>
+    <!-- Model Comparison View (initially hidden) -->
+    <div id="comparison-view" style="display:none;">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Model Comparison</h3>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4>Select Models to Compare</h4>
+                        <div id="comparison-model-selectors">
+                            <!-- Model selection checkboxes will be added here -->
                         </div>
-                        <div class="col-xs-6">
-                            <div class="text-muted">Precision</div>
-                            <div class="h2" id="summary-precision"></div>
-                        </div>
+                        <button class="btn btn-primary mt-2" onclick="compareSelectedModels()">Compare Models</button>
                     </div>
-                    <div class="row">
-                        <div class="col-xs-6">
-                            <div class="text-muted">Recall</div>
-                            <div class="h2" id="summary-recall"></div>
-                        </div>
-                        <div class="col-xs-6">
-                            <div class="text-muted">F1 Score</div>
-                            <div class="h2" id="summary-f1"></div>
+                    <div class="col-md-6">
+                        <div id="comparison-metrics">
+                            <!-- Comparison metrics will be displayed here -->
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="panel panel-info">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Model Info</h3>
-                </div>
-                <div class="panel-body">
-                    <p><strong>Name:</strong> <span id="summary-name"></span></p>
-                    <p><strong>Type:</strong> <span id="summary-type"></span></p>
-                    <p><strong>Created:</strong> <span id="summary-date"></span></p>
-                    <p><strong>Classes:</strong> <span id="summary-classes"></span></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="panel panel-warning">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Detection Statistics</h3>
-                </div>
-                <div class="panel-body">
-                    <p><strong>Recent Detections:</strong> <span id="summary-detections"></span></p>
-                    <p><strong>Verified Rate:</strong> <span id="summary-verified-rate"></span></p>
-                    <p><strong>Correction Rate:</strong> <span id="summary-correction-rate"></span></p>
-                    <p><strong>Problem Classes:</strong> <span id="summary-problems"></span></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="panel panel-success">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Training Summary</h3>
-                </div>
-                <div class="panel-body">
-                    <p><strong>Epochs:</strong> <span id="summary-epochs"></span></p>
-                    <p><strong>Best Epoch:</strong> <span id="summary-best-epoch"></span></p>
-                    <p><strong>Image Size:</strong> <span id="summary-img-size"></span></p>
-                    <p><strong>Batch Size:</strong> <span id="summary-batch"></span></p>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <canvas id="comparison-chart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Main Content Tabs -->
-    <div id="main-content" style="display:none;">
-        <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="active">
-                <a href="#performance-tab" aria-controls="performance-tab" role="tab" data-toggle="tab">
-                    <i class="glyphicon glyphicon-stats"></i> Performance
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="#details-tab" aria-controls="details-tab" role="tab" data-toggle="tab">
-                    <i class="glyphicon glyphicon-info-sign"></i> Model Details
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="#analysis-tab" aria-controls="analysis-tab" role="tab" data-toggle="tab">
-                    <i class="glyphicon glyphicon-search"></i> Analysis
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="#improvements-tab" aria-controls="improvements-tab" role="tab" data-toggle="tab">
-                    <i class="glyphicon glyphicon-wrench"></i> Improvements
-                </a>
-            </li>
-        </ul>
-        
-        <div class="tab-content">
-            <!-- Performance Tab -->
-            <div role="tabpanel" class="tab-pane active" id="performance-tab">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">Training History</h3>
+    <!-- Single Model View -->
+    <div id="single-model-view">
+        <!-- Summary Cards Row -->
+        <div id="summary-section" style="display:none;" class="row">
+            <div class="col-md-3">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Overall Performance</h3>
+                    </div>
+                    <div class="panel-body text-center">
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <div class="text-muted">mAP@0.5</div>
+                                <div class="h2" id="summary-map50"></div>
                             </div>
-                            <div class="panel-body">
-                                <div style="height: 300px;">
-                                    <canvas id="training-history-chart"></canvas>
-                                </div>
+                            <div class="col-xs-6">
+                                <div class="text-muted">Precision</div>
+                                <div class="h2" id="summary-precision"></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">Performance by Class</h3>
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <div class="text-muted">Recall</div>
+                                <div class="h2" id="summary-recall"></div>
                             </div>
-                            <div class="panel-body">
-                                <div style="height: 300px;">
-                                    <canvas id="per-class-chart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">Threshold Analysis</h3>
-                            </div>
-                            <div class="panel-body">
-                                <div style="height: 300px;">
-                                    <canvas id="threshold-analysis-chart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div id="confusion-matrix-section">
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
-                                    <h3 class="panel-title">Confusion Matrix</h3>
-                                </div>
-                                <div class="panel-body">
-                                    <div style="height: 300px;">
-                                        <canvas id="confusion-matrix-chart"></canvas>
-                                    </div>
-                                </div>
+                            <div class="col-xs-6">
+                                <div class="text-muted">F1 Score</div>
+                                <div class="h2" id="summary-f1"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="col-md-3">
+                <div class="panel panel-info">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Model Info</h3>
+                    </div>
+                    <div class="panel-body">
+                        <p><strong>Name:</strong> <span id="summary-name"></span></p>
+                        <p><strong>Type:</strong> <span id="summary-type"></span></p>
+                        <p><strong>Created:</strong> <span id="summary-date"></span></p>
+                        <p><strong>Classes:</strong> <span id="summary-classes"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="panel panel-warning">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Detection Statistics</h3>
+                    </div>
+                    <div class="panel-body">
+                        <p><strong>Recent Detections:</strong> <span id="summary-detections"></span></p>
+                        <p><strong>Verified Rate:</strong> <span id="summary-verified-rate"></span></p>
+                        <p><strong>Correction Rate:</strong> <span id="summary-correction-rate"></span></p>
+                        <p><strong>Problem Classes:</strong> <span id="summary-problems"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Training Summary</h3>
+                    </div>
+                    <div class="panel-body">
+                        <p><strong>Epochs:</strong> <span id="summary-epochs"></span></p>
+                        <p><strong>Best Epoch:</strong> <span id="summary-best-epoch"></span></p>
+                        <p><strong>Image Size:</strong> <span id="summary-img-size"></span></p>
+                        <p><strong>Batch Size:</strong> <span id="summary-batch"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Tabs -->
+        <div id="main-content" style="display:none;">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active">
+                    <a href="#performance-tab" aria-controls="performance-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-stats"></i> Performance
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="#details-tab" aria-controls="details-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-info-sign"></i> Model Details
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="#analysis-tab" aria-controls="analysis-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-search"></i> Analysis
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="#improvements-tab" aria-controls="improvements-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-wrench"></i> Improvements
+                    </a>
+                </li>
+                <!-- New tabs -->
+                <li role="presentation">
+                    <a href="#visualizations-tab" aria-controls="visualizations-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-picture"></i> Visualizations
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="#report-tab" aria-controls="report-tab" role="tab" data-toggle="tab">
+                        <i class="glyphicon glyphicon-file"></i> Report
+                    </a>
+                </li>
+            </ul>
             
-            <!-- Model Details Tab -->
-            <div role="tabpanel" class="tab-pane" id="details-tab">
-                <div id="model-details-section">
+            <div class="tab-content">
+                <!-- Performance Tab -->
+                <div role="tabpanel" class="tab-pane active" id="performance-tab">
                     <div class="row">
-                        <div class="col-md-12">
-                            <div class="panel panel-primary">
+                        <div class="col-md-6">
+                            <div class="panel panel-default">
                                 <div class="panel-heading">
-                                    <h3 class="panel-title">Model Details</h3>
+                                    <h3 class="panel-title">Training History</h3>
                                 </div>
                                 <div class="panel-body">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Model Name</div>
-                                                <div class="h3" id="model-name"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Creation Date</div>
-                                                <div class="h3" id="creation-date"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Weights File</div>
-                                                <div class="h3" id="weights-file"></div>
-                                            </div>
+                                    <div style="height: 300px;">
+                                        <canvas id="training-history-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Performance by Class</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div style="height: 300px;">
+                                        <canvas id="per-class-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Threshold Analysis</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div style="height: 300px;">
+                                        <canvas id="threshold-analysis-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="confusion-matrix-section">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <h3 class="panel-title">Confusion Matrix</h3>
+                                    </div>
+                                    <div class="panel-body">
+                                        <div style="height: 300px;">
+                                            <canvas id="confusion-matrix-chart"></canvas>
                                         </div>
                                     </div>
-                                    <!-- Configuration Table -->
-                                    <div id="model-config">
-                                        <div class="panel panel-default">
-                                            <div class="panel-heading">
-                                                <h4 class="panel-title">
-                                                    <a data-toggle="collapse" href="#configCollapse">
-                                                        Configuration <span class="pull-right"><i class="glyphicon glyphicon-chevron-down"></i></span>
-                                                    </a>
-                                                </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Model Details Tab -->
+                <div role="tabpanel" class="tab-pane" id="details-tab">
+                    <div id="model-details-section">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="panel panel-primary">
+                                    <div class="panel-heading">
+                                        <h3 class="panel-title">Model Details</h3>
+                                    </div>
+                                    <div class="panel-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Model Name</div>
+                                                    <div class="h3" id="model-name"></div>
+                                                </div>
                                             </div>
-                                            <div id="configCollapse" class="panel-collapse collapse">
-                                                <div class="panel-body">
-                                                    <!-- Tabbed navigation for config categories -->
-                                                    <ul class="nav nav-tabs" role="tablist">
-                                                        <li role="presentation" class="active"><a href="#essential" aria-controls="essential" role="tab" data-toggle="tab">Essential</a></li>
-                                                        <li role="presentation"><a href="#training" aria-controls="training" role="tab" data-toggle="tab">Training</a></li>
-                                                        <li role="presentation"><a href="#augmentation" aria-controls="augmentation" role="tab" data-toggle="tab">Augmentation</a></li>
-                                                        <li role="presentation"><a href="#advanced" aria-controls="advanced" role="tab" data-toggle="tab">Advanced</a></li>
-                                                    </ul>
-                                                    
-                                                    <!-- Tab content -->
-                                                    <div class="tab-content">
-                                                        <div role="tabpanel" class="tab-pane active" id="essential">
-                                                            <table class="table table-striped table-condensed">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Parameter</th>
-                                                                        <th>Value</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody id="essential-params">
-                                                                    <!-- Essential parameters will be inserted dynamically -->
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        <div role="tabpanel" class="tab-pane" id="training">
-                                                            <table class="table table-striped table-condensed">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Parameter</th>
-                                                                        <th>Value</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody id="training-params">
-                                                                    <!-- Training parameters will be inserted dynamically -->
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        <div role="tabpanel" class="tab-pane" id="augmentation">
-                                                            <table class="table table-striped table-condensed">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Parameter</th>
-                                                                        <th>Value</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody id="augmentation-params">
-                                                                    <!-- Augmentation parameters will be inserted dynamically -->
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        <div role="tabpanel" class="tab-pane" id="advanced">
-                                                            <table class="table table-striped table-condensed">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Parameter</th>
-                                                                        <th>Value</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody id="advanced-params">
-                                                                    <!-- All other parameters will be inserted dynamically -->
-                                                                </tbody>
-                                                            </table>
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Creation Date</div>
+                                                    <div class="h3" id="creation-date"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Weights File</div>
+                                                    <div class="h3" id="weights-file"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Configuration Table -->
+                                        <div id="model-config">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading">
+                                                    <h4 class="panel-title">
+                                                        <a data-toggle="collapse" href="#configCollapse">
+                                                            Configuration <span class="pull-right"><i class="glyphicon glyphicon-chevron-down"></i></span>
+                                                        </a>
+                                                    </h4>
+                                                </div>
+                                                <div id="configCollapse" class="panel-collapse collapse">
+                                                    <div class="panel-body">
+                                                        <!-- Tabbed navigation for config categories -->
+                                                        <ul class="nav nav-tabs" role="tablist">
+                                                            <li role="presentation" class="active"><a href="#essential" aria-controls="essential" role="tab" data-toggle="tab">Essential</a></li>
+                                                            <li role="presentation"><a href="#training" aria-controls="training" role="tab" data-toggle="tab">Training</a></li>
+                                                            <li role="presentation"><a href="#augmentation" aria-controls="augmentation" role="tab" data-toggle="tab">Augmentation</a></li>
+                                                            <li role="presentation"><a href="#advanced" aria-controls="advanced" role="tab" data-toggle="tab">Advanced</a></li>
+                                                        </ul>
+                                                        
+                                                        <!-- Tab content -->
+                                                        <div class="tab-content">
+                                                            <div role="tabpanel" class="tab-pane active" id="essential">
+                                                                <table class="table table-striped table-condensed">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Parameter</th>
+                                                                            <th>Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="essential-params">
+                                                                        <!-- Essential parameters will be inserted dynamically -->
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div role="tabpanel" class="tab-pane" id="training">
+                                                                <table class="table table-striped table-condensed">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Parameter</th>
+                                                                            <th>Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="training-params">
+                                                                        <!-- Training parameters will be inserted dynamically -->
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div role="tabpanel" class="tab-pane" id="augmentation">
+                                                                <table class="table table-striped table-condensed">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Parameter</th>
+                                                                            <th>Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="augmentation-params">
+                                                                        <!-- Augmentation parameters will be inserted dynamically -->
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div role="tabpanel" class="tab-pane" id="advanced">
+                                                                <table class="table table-striped table-condensed">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Parameter</th>
+                                                                            <th>Value</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="advanced-params">
+                                                                        <!-- All other parameters will be inserted dynamically -->
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -297,104 +432,279 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Analysis Tab -->
-            <div role="tabpanel" class="tab-pane" id="analysis-tab">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div id="detection-stats-section">
-                            <div class="panel panel-warning">
-                                <div class="panel-heading">
-                                    <h3 class="panel-title">Detection Statistics</h3>
-                                </div>
-                                <div class="panel-body">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Recent Detections</div>
-                                                <div class="h3" id="total-recent"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Verified</div>
-                                                <div class="h3" id="verified-count"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="well">
-                                                <div class="text-muted">Correction Rate</div>
-                                                <div class="h3" id="correction-rate"></div>
-                                            </div>
-                                        </div>
+                
+                <!-- Analysis Tab -->
+                <div role="tabpanel" class="tab-pane" id="analysis-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div id="detection-stats-section">
+                                <div class="panel panel-warning">
+                                    <div class="panel-heading">
+                                        <h3 class="panel-title">Detection Statistics</h3>
                                     </div>
-                                    <h4>Species Requiring Corrections</h4>
-                                    <div style="height: 300px;">
-                                        <canvas id="correction-chart"></canvas>
+                                    <div class="panel-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Recent Detections</div>
+                                                    <div class="h3" id="total-recent"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Verified</div>
+                                                    <div class="h3" id="verified-count"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="well">
+                                                    <div class="text-muted">Correction Rate</div>
+                                                    <div class="h3" id="correction-rate"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h4>Species Requiring Corrections</h4>
+                                        <div style="height: 300px;">
+                                            <canvas id="correction-chart"></canvas>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="panel panel-info">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">Taxonomic Group Performance</h3>
-                            </div>
-                            <div class="panel-body">
-                                <div style="height: 300px;">
-                                    <canvas id="taxonomic-chart"></canvas>
+                        <div class="col-md-6">
+                            <div class="panel panel-info">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Taxonomic Group Performance</h3>
                                 </div>
-                                <div id="taxonomic-details" class="mt-3">
-                                    <!-- Taxonomic group details will be inserted here -->
+                                <div class="panel-body">
+                                    <div style="height: 300px;">
+                                        <canvas id="taxonomic-chart"></canvas>
+                                    </div>
+                                    <div id="taxonomic-details" class="mt-3">
+                                        <!-- Taxonomic group details will be inserted here -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Improvements Tab -->
-            <div role="tabpanel" class="tab-pane" id="improvements-tab">
-                <div id="improvement-section">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="panel panel-success">
-                                <div class="panel-heading">
-                                    <h3 class="panel-title">Improvement Opportunities</h3>
-                                </div>
-                                <div class="panel-body">
-                                    <h4>Suggested Improvements</h4>
-                                    <ul id="suggestions-list" class="list-group"></ul>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h4>Underrepresented Species</h4>
-                                            <table id="underrepresented-table" class="table table-striped table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Species</th>
-                                                        <th>Count</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody></tbody>
-                                            </table>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <h4>Problem Species</h4>
-                                            <table id="problem-table" class="table table-striped table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Species</th>
-                                                        <th>Correction Rate</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody></tbody>
-                                            </table>
+                
+                <!-- Improvements Tab -->
+                <div role="tabpanel" class="tab-pane" id="improvements-tab">
+                    <div id="improvement-section">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="panel panel-success">
+                                    <div class="panel-heading">
+                                        <h3 class="panel-title">Improvement Opportunities</h3>
+                                    </div>
+                                    <div class="panel-body">
+                                        <h4>Suggested Improvements</h4>
+                                        <ul id="suggestions-list" class="list-group"></ul>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h4>Underrepresented Species</h4>
+                                                <table id="underrepresented-table" class="table table-striped table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Species</th>
+                                                            <th>Count</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h4>Problem Species</h4>
+                                                <table id="problem-table" class="table table-striped table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Species</th>
+                                                            <th>Correction Rate</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NEW: Visualizations Tab -->
+                <div role="tabpanel" class="tab-pane" id="visualizations-tab">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Training & Validation Samples</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li role="presentation" class="active"><a href="#training-samples" role="tab" data-toggle="tab">Training Samples</a></li>
+                                        <li role="presentation"><a href="#validation-samples" role="tab" data-toggle="tab">Validation</a></li>
+                                    </ul>
+                                    
+                                    <div class="tab-content">
+                                        <div role="tabpanel" class="tab-pane active" id="training-samples">
+                                            <!-- Training sample images in carousel -->
+                                            <div id="training-carousel" class="carousel slide" data-ride="carousel">
+                                                <!-- Indicators -->
+                                                <ol class="carousel-indicators" id="training-indicators">
+                                                    <!-- Will be populated dynamically -->
+                                                </ol>
+                                                
+                                                <!-- Wrapper for slides -->
+                                                <div class="carousel-inner" id="training-carousel-inner">
+                                                    <!-- Will be populated dynamically -->
+                                                </div>
+                                                
+                                                <!-- Controls -->
+                                                <a class="left carousel-control" href="#training-carousel" role="button" data-slide="prev">
+                                                    <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+                                                    <span class="sr-only">Previous</span>
+                                                </a>
+                                                <a class="right carousel-control" href="#training-carousel" role="button" data-slide="next">
+                                                    <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                                                    <span class="sr-only">Next</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <div role="tabpanel" class="tab-pane" id="validation-samples">
+                                            <!-- Validation batch selector -->
+                                            <div class="form-group">
+                                                <label for="validation-batch-selector">Select Validation Batch</label>
+                                                <select class="form-control" id="validation-batch-selector" onchange="updateValidationBatch(this.value)">
+                                                    <!-- Will be populated dynamically -->
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Side-by-side comparison of ground truth vs predictions -->
+                                            <div class="validation-comparison">
+                                                <div class="side-by-side">
+                                                    <div class="ground-truth">
+                                                        <h4>Ground Truth</h4>
+                                                        <img id="ground-truth-img" src="" class="img-responsive">
+                                                    </div>
+                                                    <div class="predictions">
+                                                        <h4>Model Predictions</h4>
+                                                        <img id="predictions-img" src="" class="img-responsive">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Advanced Performance Visualizations</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <!-- Nav tabs -->
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li role="presentation" class="active"><a href="#pr-curve" role="tab" data-toggle="tab">PR Curve</a></li>
+                                        <li role="presentation"><a href="#f1-curve" role="tab" data-toggle="tab">F1 Curve</a></li>
+                                        <li role="presentation"><a href="#p-r-curves" role="tab" data-toggle="tab">P/R Curves</a></li>
+                                        <li role="presentation"><a href="#labels-analysis" role="tab" data-toggle="tab">Labels Analysis</a></li>
+                                        <li role="presentation"><a href="#confusion-visual" role="tab" data-toggle="tab">Confusion Matrix</a></li>
+                                    </ul>
+                                    
+                                    <!-- Tab content -->
+                                    <div class="tab-content">
+                                        <div role="tabpanel" class="tab-pane active" id="pr-curve">
+                                            <div class="performance-viz-container">
+                                                <img id="pr-curve-img" src="" class="img-responsive">
+                                                <p class="text-muted">Precision-Recall curve showing the tradeoff between precision and recall at different thresholds.</p>
+                                            </div>
+                                        </div>
+                                        <div role="tabpanel" class="tab-pane" id="f1-curve">
+                                            <div class="performance-viz-container">
+                                                <img id="f1-curve-img" src="" class="img-responsive">
+                                                <p class="text-muted">F1 score curve showing the harmonic mean of precision and recall at different thresholds.</p>
+                                            </div>
+                                        </div>
+                                        <div role="tabpanel" class="tab-pane" id="p-r-curves">
+                                            <div class="performance-viz-container">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <img id="p-curve-img" src="" class="img-responsive">
+                                                        <p class="text-muted">Precision curve across different confidence thresholds.</p>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <img id="r-curve-img" src="" class="img-responsive">
+                                                        <p class="text-muted">Recall curve across different confidence thresholds.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div role="tabpanel" class="tab-pane" id="labels-analysis">
+                                            <div class="performance-viz-container">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <img id="labels-img" src="" class="img-responsive">
+                                                        <p class="text-muted">Distribution of class labels in the dataset.</p>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <img id="labels-correlogram-img" src="" class="img-responsive">
+                                                        <p class="text-muted">Co-occurrence of classes in the dataset.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div role="tabpanel" class="tab-pane" id="confusion-visual">
+                                            <div class="performance-viz-container">
+                                                <img id="confusion-matrix-img" src="" class="img-responsive">
+                                                <p class="text-muted">Confusion matrix visualization showing the model's true vs. predicted classes.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NEW: Report Tab -->
+                <div role="tabpanel" class="tab-pane" id="report-tab">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Dashboard Integration Report</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div id="report-content" class="markdown-body">
+                                <!-- Rendered markdown content from dashboard_integration_report.md -->
+                                <div class="alert alert-info">Loading report...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Download Resources</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="btn-group" role="group" id="download-resources">
+                                <button type="button" class="btn btn-default" onclick="downloadJSON('performance_metrics')">
+                                    <i class="glyphicon glyphicon-download"></i> Performance Metrics
+                                </button>
+                                <button type="button" class="btn btn-default" onclick="downloadJSON('class_metrics')">
+                                    <i class="glyphicon glyphicon-download"></i> Class Metrics
+                                </button>
+                                <button type="button" class="btn btn-default" onclick="downloadImage('confusion_matrix')">
+                                    <i class="glyphicon glyphicon-download"></i> Confusion Matrix
+                                </button>
+                                <!-- Additional download buttons will be added dynamically -->
                             </div>
                         </div>
                     </div>
@@ -405,6 +715,11 @@
 </div>
 
 <script>
+    // Global variable to store model ID and images
+    let currentModelId = null;
+    let modelImages = null;
+    let availableModels = [];
+    
     // Fetch model performance data when the page loads
     document.addEventListener('DOMContentLoaded', function() {
         // Check if Chart.js is loaded
@@ -414,12 +729,248 @@
             return;
         }
         
-        fetchModelPerformance();
+        // Load available models first
+        loadAvailableModels();
     });
     
-    async function fetchModelPerformance() {
+    async function loadAvailableModels() {
         try {
-            const response = await fetch('/api/system/model-performance');
+            const response = await fetch('/api/system/available-models');
+            const data = await response.json();
+            
+            if (data.success && data.models && data.models.length > 0) {
+                availableModels = data.models;
+                const modelSelector = document.getElementById('model-selector-dropdown');
+                modelSelector.innerHTML = '';
+                
+                // Add models to dropdown
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    
+                    // Create a friendly name
+                    const modelType = model.is_hierarchical ? 'Hierarchical' : 'Standard';
+                    const creationDate = model.created_at.split(' ')[0]; // Just the date part
+                    option.textContent = `${modelType} Model (${creationDate})`;
+                    
+                    modelSelector.appendChild(option);
+                });
+                
+                // Select first model and load it
+                if (data.models.length > 0) {
+                    selectModel(data.models[0].id);
+                }
+                
+                // Also populate comparison model checklist
+                populateComparisonModelSelectors(data.models);
+            } else {
+                document.getElementById('loading-message').innerHTML = 
+                    '<div class="alert alert-warning"><strong>No Models Found:</strong> Please train a model first.</div>';
+            }
+        } catch (error) {
+            console.error('Error loading models:', error);
+            document.getElementById('loading-message').innerHTML = 
+                '<div class="alert alert-danger"><strong>Error:</strong> Could not load available models. See console for details.</div>';
+        }
+    }
+    
+    function populateComparisonModelSelectors(models) {
+        const container = document.getElementById('comparison-model-selectors');
+        container.innerHTML = '';
+        
+        models.forEach(model => {
+            const modelType = model.is_hierarchical ? 'Hierarchical' : 'Standard';
+            const creationDate = model.created_at.split(' ')[0]; // Just the date part
+            const modelName = `${modelType} Model (${creationDate})`;
+            
+            const div = document.createElement('div');
+            div.className = 'checkbox';
+            div.innerHTML = `
+                <label>
+                    <input type="checkbox" value="${model.id}" name="comparison-models">
+                    ${modelName}
+                </label>
+            `;
+            
+            container.appendChild(div);
+        });
+    }
+    
+    function selectModel(modelId) {
+        if (!modelId) return;
+        
+        currentModelId = modelId;
+        fetchModelPerformance(modelId);
+        fetchModelImages(modelId);
+        fetchModelReport(modelId);
+    }
+    
+    function toggleComparisonView(value) {
+        const comparisonView = document.getElementById('comparison-view');
+        const singleModelView = document.getElementById('single-model-view');
+        
+        if (value === 'compare') {
+            comparisonView.style.display = 'block';
+            singleModelView.style.display = 'none';
+        } else {
+            comparisonView.style.display = 'none';
+            singleModelView.style.display = 'block';
+        }
+    }
+    
+    async function compareSelectedModels() {
+        const checkboxes = document.querySelectorAll('input[name="comparison-models"]:checked');
+        const modelIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (modelIds.length < 2) {
+            alert('Please select at least two models to compare');
+            return;
+        }
+        
+        // Show loading indicator
+        document.getElementById('comparison-metrics').innerHTML = 
+            '<div class="alert alert-info"><i class="glyphicon glyphicon-refresh"></i> Loading comparison data...</div>';
+        
+        try {
+            // Build the query string with multiple model IDs
+            const queryString = modelIds.map(id => `model_ids[]=${id}`).join('&');
+            const response = await fetch(`/api/system/model-comparison?${queryString}`);
+            const data = await response.json();
+            
+            if (data.success && data.models && data.models.length > 0) {
+                // Create metrics table
+                let metricsHtml = '<h4>Model Comparison</h4>';
+                metricsHtml += '<table class="table table-striped table-bordered">';
+                metricsHtml += '<thead><tr><th>Model</th><th>Precision</th><th>Recall</th><th>mAP@0.5</th><th>F1 Score</th></tr></thead>';
+                metricsHtml += '<tbody>';
+                
+                // Chart datasets for visualization
+                const chartLabels = [];
+                const precisionData = [];
+                const recallData = [];
+                const mapData = [];
+                
+                // Add each model's metrics
+                data.models.forEach(model => {
+                    const modelDetails = model.details;
+                    const metrics = model.metrics;
+                    
+                    // Calculate F1 score
+                    const precision = metrics.precision || 0;
+                    const recall = metrics.recall || 0;
+                    const f1 = precision && recall ? (2 * precision * recall / (precision + recall)) : 0;
+                    
+                    // Find model in availableModels to get friendly name
+                    const modelInfo = availableModels.find(m => m.id === model.id);
+                    const modelType = modelInfo && modelInfo.is_hierarchical ? 'Hierarchical' : 'Standard';
+                    const creationDate = modelInfo ? modelInfo.created_at.split(' ')[0] : 'Unknown';
+                    const modelName = `${modelType} (${creationDate})`;
+                    
+                    // Add to table
+                    metricsHtml += `<tr>
+                        <td>${modelName}</td>
+                        <td>${(precision * 100).toFixed(1)}%</td>
+                        <td>${(recall * 100).toFixed(1)}%</td>
+                        <td>${(metrics.mAP50 * 100).toFixed(1)}%</td>
+                        <td>${(f1 * 100).toFixed(1)}%</td>
+                    </tr>`;
+                    
+                    // Add to chart data
+                    chartLabels.push(modelName);
+                    precisionData.push((precision * 100).toFixed(1));
+                    recallData.push((recall * 100).toFixed(1));
+                    mapData.push((metrics.mAP50 * 100).toFixed(1));
+                });
+                
+                metricsHtml += '</tbody></table>';
+                
+                // Display the metrics table
+                document.getElementById('comparison-metrics').innerHTML = metricsHtml;
+                
+                // Create comparison chart
+                const ctx = document.getElementById('comparison-chart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (window.comparisonChart) {
+                    window.comparisonChart.destroy();
+                }
+                
+                window.comparisonChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [
+                            {
+                                label: 'Precision',
+                                data: precisionData,
+                                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                                borderColor: 'rgba(52, 152, 219, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Recall',
+                                data: recallData,
+                                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                                borderColor: 'rgba(46, 204, 113, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'mAP@0.5',
+                                data: mapData,
+                                backgroundColor: 'rgba(243, 156, 18, 0.7)',
+                                borderColor: 'rgba(243, 156, 18, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Model Comparison'
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.dataset.label || '';
+                                        const value = context.parsed.y || 0;
+                                        return `${label}: ${value}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Percentage (%)'
+                                },
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('comparison-metrics').innerHTML = 
+                    '<div class="alert alert-warning">No comparison data available for the selected models.</div>';
+            }
+        } catch (error) {
+            console.error('Error comparing models:', error);
+            document.getElementById('comparison-metrics').innerHTML = 
+                `<div class="alert alert-danger">Error comparing models: ${error.message}</div>`;
+        }
+    }
+    
+    async function fetchModelPerformance(modelId) {
+        try {
+            const url = modelId ? `/api/system/model-performance?model_id=${modelId}` : '/api/system/model-performance';
+            const response = await fetch(url);
             const data = await response.json();
             
             if (data.success) {
@@ -497,6 +1048,201 @@
             console.error('Error fetching model performance:', error);
             document.getElementById('loading-message').innerHTML = '<div class="alert alert-danger"><strong>Error:</strong> Could not load model performance data. Check browser console for details.</div>';
         }
+    }
+    
+    async function fetchModelImages(modelId) {
+        try {
+            const response = await fetch(`/api/system/model-images/${modelId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                modelImages = data.images;
+                
+                // Populate training images carousel
+                populateTrainingCarousel(data.images.training);
+                
+                // Populate validation batch selector
+                populateValidationBatchSelector(data.images.validation);
+                
+                // Populate performance visualizations
+                populatePerformanceVisualizations(data.images.performance);
+            }
+        } catch (error) {
+            console.error('Error fetching model images:', error);
+        }
+    }
+    
+    function populateTrainingCarousel(trainingImages) {
+        if (!trainingImages || trainingImages.length === 0) {
+            document.getElementById('training-samples').innerHTML = 
+                '<div class="alert alert-warning">No training sample images available for this model.</div>';
+            return;
+        }
+        
+        const indicators = document.getElementById('training-indicators');
+        const carouselInner = document.getElementById('training-carousel-inner');
+        
+        // Clear existing content
+        indicators.innerHTML = '';
+        carouselInner.innerHTML = '';
+        
+        // Add each training image to carousel
+        trainingImages.forEach((image, index) => {
+            // Add indicator
+            const indicator = document.createElement('li');
+            indicator.setAttribute('data-target', '#training-carousel');
+            indicator.setAttribute('data-slide-to', index.toString());
+            if (index === 0) indicator.classList.add('active');
+            indicators.appendChild(indicator);
+            
+            // Add slide
+            const slide = document.createElement('div');
+            slide.className = index === 0 ? 'item active' : 'item';
+            slide.innerHTML = `
+                <img src="${image.url}" alt="Training Batch ${index}" class="img-responsive center-block">
+                <div class="carousel-caption">
+                    <h3>Training Batch ${index + 1}</h3>
+                </div>
+            `;
+            carouselInner.appendChild(slide);
+        });
+    }
+    
+    function populateValidationBatchSelector(validationBatches) {
+        const selector = document.getElementById('validation-batch-selector');
+        
+        if (!validationBatches || validationBatches.length === 0) {
+            document.getElementById('validation-samples').innerHTML = 
+                '<div class="alert alert-warning">No validation sample images available for this model.</div>';
+            return;
+        }
+        
+        // Clear existing options
+        selector.innerHTML = '';
+        
+        // Add each validation batch as an option
+        validationBatches.forEach((batch, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `Validation Batch ${batch.batch}`;
+            selector.appendChild(option);
+        });
+        
+        // Update validation images with first batch
+        updateValidationBatch(0);
+    }
+    
+    function updateValidationBatch(batchIndex) {
+        if (!modelImages || !modelImages.validation || modelImages.validation.length === 0) return;
+        
+        const batch = modelImages.validation[batchIndex];
+        if (!batch) return;
+        
+        // Update ground truth and prediction images
+        document.getElementById('ground-truth-img').src = batch.labels.url;
+        document.getElementById('predictions-img').src = batch.predictions.url;
+    }
+    
+    function populatePerformanceVisualizations(performanceImages) {
+        if (!performanceImages || performanceImages.length === 0) {
+            document.getElementById('pr-curve').innerHTML = 
+                '<div class="alert alert-warning">No performance visualizations available for this model.</div>';
+            return;
+        }
+        
+        // Clear existing image sources
+        document.getElementById('pr-curve-img').src = '';
+        document.getElementById('f1-curve-img').src = '';
+        document.getElementById('p-curve-img').src = '';
+        document.getElementById('r-curve-img').src = '';
+        document.getElementById('labels-img').src = '';
+        document.getElementById('labels-correlogram-img').src = '';
+        document.getElementById('confusion-matrix-img').src = '';
+        
+        // Set each image source based on filename
+        performanceImages.forEach(image => {
+            const filename = image.filename.toLowerCase();
+            
+            if (filename.includes('pr_curve')) {
+                document.getElementById('pr-curve-img').src = image.url;
+            } else if (filename.includes('f1_curve')) {
+                document.getElementById('f1-curve-img').src = image.url;
+            } else if (filename.includes('p_curve')) {
+                document.getElementById('p-curve-img').src = image.url;
+            } else if (filename.includes('r_curve')) {
+                document.getElementById('r-curve-img').src = image.url;
+            } else if (filename === 'labels.jpg') {
+                document.getElementById('labels-img').src = image.url;
+            } else if (filename.includes('labels_correlogram')) {
+                document.getElementById('labels-correlogram-img').src = image.url;
+            } else if (filename.includes('confusion_matrix') && !filename.includes('normalized')) {
+                document.getElementById('confusion-matrix-img').src = image.url;
+            }
+        });
+    }
+    
+    async function fetchModelReport(modelId) {
+        try {
+            const response = await fetch(`/api/system/model-report/${modelId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Render markdown content
+                document.getElementById('report-content').innerHTML = marked.parse(data.report_content);
+                
+                // If report was generated, show a small notice
+                if (data.generated) {
+                    document.getElementById('report-content').innerHTML += 
+                        '<div class="alert alert-info mt-3">Note: This is an automatically generated report.</div>';
+                }
+            } else {
+                document.getElementById('report-content').innerHTML = 
+                    '<div class="alert alert-warning">No report available for this model.</div>';
+            }
+        } catch (error) {
+            console.error('Error fetching model report:', error);
+            document.getElementById('report-content').innerHTML = 
+                `<div class="alert alert-danger">Error fetching model report: ${error.message}</div>`;
+        }
+    }
+    
+    function downloadJSON(type) {
+        if (!currentModelId) return;
+        
+        const filename = `${type}.json`;
+        const url = `/api/system/model-file/${currentModelId}/${filename}`;
+        
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+    
+    function downloadImage(type) {
+        if (!currentModelId || !modelImages) return;
+        
+        // Find the image URL based on type
+        let imageUrl = null;
+        
+        if (type === 'confusion_matrix' && modelImages.performance) {
+            const confusionImage = modelImages.performance.find(img => img.filename.includes('confusion_matrix'));
+            if (confusionImage) {
+                imageUrl = confusionImage.url;
+            }
+        }
+        
+        if (!imageUrl) return;
+        
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = imageUrl;
+        a.download = type + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
     
     function populateModelDetails(details) {

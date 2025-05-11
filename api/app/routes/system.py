@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, current_app, request
+from flask import Blueprint, jsonify, current_app, request, send_file, render_template, abort
 from app.models.models import Image, Species, Annotation
 from app import db
 from sqlalchemy import func, distinct
@@ -6,6 +6,7 @@ import os
 import glob
 import json
 from datetime import datetime
+import mimetypes
 from app.services.model_performance_service import ModelPerformanceService
 
 # Create a blueprint for system routes
@@ -154,6 +155,9 @@ def get_available_models():
                         except Exception:
                             pass
                     
+                    # Check if model is hierarchical
+                    is_hierarchical = "hierarchical" in folder.lower()
+                    
                     # Add to list
                     model_folders.append({
                         'id': folder,
@@ -161,7 +165,8 @@ def get_available_models():
                         'created_at': creation_date,
                         'creation_time': creation_time,
                         'weights_files': weights_files,
-                        'model_type': model_type
+                        'model_type': model_type,
+                        'is_hierarchical': is_hierarchical
                     })
         
         # Sort by creation time (newest first)
@@ -367,6 +372,197 @@ def get_taxonomic_performance(model_id):
         return jsonify({
             'success': False,
             'message': f'Error retrieving taxonomic performance: {str(e)}'
+        }), 500
+
+# New route to serve model image files
+@system.route('/api/system/model-images/<model_id>')
+def get_model_images(model_id):
+    """Get list of all available images for a model."""
+    try:
+        models_dir = current_app.config.get('MODEL_FOLDER',
+                  os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                  os.path.abspath(__file__)))), 'models', 'trained'))
+        
+        model_dir = os.path.join(models_dir, model_id)
+        
+        if not os.path.exists(model_dir):
+            return jsonify({
+                'success': False,
+                'message': f'Model directory not found: {model_id}'
+            }), 404
+        
+        # Find all image files
+        image_files = {
+            'training': [],
+            'validation': [],
+            'performance': []
+        }
+        
+        # Find training batch images
+        training_images = glob.glob(os.path.join(model_dir, 'train_batch*.jpg'))
+        for img_path in training_images:
+            image_files['training'].append({
+                'filename': os.path.basename(img_path),
+                'url': f'/api/system/model-file/{model_id}/{os.path.basename(img_path)}',
+                'type': 'training'
+            })
+        
+        # Find validation batch images
+        val_images_labels = glob.glob(os.path.join(model_dir, 'val_batch*_labels.jpg'))
+        val_images_pred = glob.glob(os.path.join(model_dir, 'val_batch*_pred.jpg'))
+        
+        # Group validation images in pairs
+        for img_path in val_images_labels:
+            batch_number = os.path.basename(img_path).split('_')[1].split('.')[0]
+            pred_path = os.path.join(model_dir, f'val_batch{batch_number}_pred.jpg')
+            
+            if os.path.exists(pred_path):
+                image_files['validation'].append({
+                    'batch': batch_number,
+                    'labels': {
+                        'filename': os.path.basename(img_path),
+                        'url': f'/api/system/model-file/{model_id}/{os.path.basename(img_path)}'
+                    },
+                    'predictions': {
+                        'filename': os.path.basename(pred_path),
+                        'url': f'/api/system/model-file/{model_id}/{os.path.basename(pred_path)}'
+                    }
+                })
+        
+        # Find performance visualization PNGs
+        perf_patterns = ['confusion_matrix.png', 'F1_curve.png', 'P_curve.png', 'PR_curve.png', 
+                       'R_curve.png', 'results.png', 'labels.jpg', 'labels_correlogram.jpg']
+        
+        for pattern in perf_patterns:
+            img_path = os.path.join(model_dir, pattern)
+            if os.path.exists(img_path):
+                image_files['performance'].append({
+                    'filename': os.path.basename(img_path),
+                    'url': f'/api/system/model-file/{model_id}/{os.path.basename(img_path)}',
+                    'type': 'performance',
+                    'category': os.path.splitext(pattern)[0].replace('_', ' ').title()
+                })
+        
+        return jsonify({
+            'success': True,
+            'model_id': model_id,
+            'images': image_files
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error getting model images: {str(e)}'
+        }), 500
+
+# Route to serve individual model files
+@system.route('/api/system/model-file/<model_id>/<filename>')
+def get_model_file(model_id, filename):
+    """Serve a model file (image, etc) by model ID and filename."""
+    try:
+        models_dir = current_app.config.get('MODEL_FOLDER',
+                  os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                  os.path.abspath(__file__)))), 'models', 'trained'))
+        
+        model_dir = os.path.join(models_dir, model_id)
+        
+        if not os.path.exists(model_dir):
+            abort(404)
+        
+        file_path = os.path.join(model_dir, filename)
+        
+        # Security check - ensure the file is within the model directory
+        if not os.path.abspath(file_path).startswith(os.path.abspath(model_dir)):
+            abort(403)  # Forbidden - attempted path traversal
+        
+        if not os.path.exists(file_path):
+            abort(404)
+        
+        # Determine content type
+        content_type = mimetypes.guess_type(file_path)[0]
+        if not content_type:
+            content_type = 'application/octet-stream'
+        
+        return send_file(file_path, mimetype=content_type)
+    except Exception as e:
+        abort(500)
+
+# Route to get dashboard report content
+@system.route('/api/system/model-report/<model_id>')
+def get_model_report(model_id):
+    """Get the dashboard integration report for a model."""
+    try:
+        # Look for dashboard_integration_report.md in the dashboard directory
+        models_dir = current_app.config.get('MODEL_FOLDER',
+                  os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                  os.path.abspath(__file__)))), 'models', 'trained'))
+        
+        model_dir = os.path.join(models_dir, model_id)
+        
+        if not os.path.exists(model_dir):
+            return jsonify({
+                'success': False,
+                'message': f'Model directory not found: {model_id}'
+            }), 404
+        
+        # First look in dashboard subdirectory
+        report_path = os.path.join(model_dir, 'dashboard', 'dashboard_integration_report.md')
+        
+        if not os.path.exists(report_path):
+            # Look in main model directory
+            report_path = os.path.join(model_dir, 'dashboard_integration_report.md')
+        
+        # If still not found, look in dashboard output directory
+        if not os.path.exists(report_path):
+            dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                          os.path.abspath(__file__)))), 'dashboard')
+            
+            # Find the most recent dashboard output directory
+            dashboard_dirs = glob.glob(os.path.join(dashboard_dir, 'dashboard_*'))
+            
+            if dashboard_dirs:
+                # Sort by creation time (newest first)
+                dashboard_dirs.sort(key=lambda x: os.path.getctime(x), reverse=True)
+                report_path = os.path.join(dashboard_dirs[0], 'dashboard_integration_report.md')
+        
+        if os.path.exists(report_path):
+            with open(report_path, 'r') as f:
+                report_content = f.read()
+            
+            return jsonify({
+                'success': True,
+                'model_id': model_id,
+                'report_content': report_content
+            })
+        else:
+            # Generate a simple report if none exists
+            report_content = f"""# Model Report for {model_id}
+
+## Overview
+This is an automatically generated report for the model {model_id}.
+
+## Performance Summary
+The performance metrics for this model are available in the Performance tab.
+
+## Model Details
+The model details are available in the Details tab.
+
+## Analysis
+The Analysis tab provides insights into detection statistics and taxonomic group performance.
+
+## Improvement Opportunities
+The Improvements tab suggests ways to improve the model.
+"""
+            
+            return jsonify({
+                'success': True,
+                'model_id': model_id,
+                'report_content': report_content,
+                'generated': True
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving model report: {str(e)}'
         }), 500
 
 # Add a debug endpoint for direct API inspection
