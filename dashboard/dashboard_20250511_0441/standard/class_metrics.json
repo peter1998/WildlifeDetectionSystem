@@ -1,0 +1,42 @@
+{
+  "Male Roe Deer": {
+    "precision": 0.5,
+    "recall": 0.6086956521739131,
+    "map50": 0.5400187165775401
+  },
+  "Female Roe Deer": {
+    "precision": 0.25,
+    "recall": 0.6428571428571429,
+    "map50": 0.2937875
+  },
+  "Fox": {
+    "precision": 0.8,
+    "recall": 0.5,
+    "map50": 0.649
+  },
+  "Jackal": {
+    "precision": 1.0,
+    "recall": 0.75,
+    "map50": 0.875
+  },
+  "Weasel": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "map50": 0.0
+  },
+  "Wildcat": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "map50": 0.0
+  },
+  "Rabbit": {
+    "precision": 0.631578947368421,
+    "recall": 0.8888888888888888,
+    "map50": 0.8610900648360029
+  },
+  "Human": {
+    "precision": 0.6666666666666666,
+    "recall": 1.0,
+    "map50": 0.930897435897436
+  }
+}

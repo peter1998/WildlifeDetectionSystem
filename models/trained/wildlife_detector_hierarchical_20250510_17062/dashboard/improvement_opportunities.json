@@ -1,0 +1,73 @@
+{
+  "improvement_suggestions": [
+    "Consider collecting more training data for species with low detection accuracy.",
+    "Experiment with different confidence thresholds for deployment to balance precision and recall.",
+    "Fine-tune the model on specific taxonomic groups that show lower performance.",
+    "Consider using this model as a first stage in a two-stage detection pipeline."
+  ],
+  "underrepresented_species": {
+    "Deer": 22,
+    "Carnivores": 13
+  },
+  "problem_species": {
+    "Deer": 20.046227864616636,
+    "Small_Mammals": 27.772345580224297,
+    "Birds": 42.5920757764641
+  },
+  "taxonomic_group_performance": {
+    "Deer": {
+      "precision": 0.9425017255085609,
+      "recall": 0.8861763966917227,
+      "map50": 0.9606940261452457,
+      "species": [
+        "Red Deer",
+        "Male Roe Deer",
+        "Female Roe Deer",
+        "Fallow Deer"
+      ]
+    },
+    "Carnivores": {
+      "precision": 0.8851963212278973,
+      "recall": 0.6428571428571429,
+      "map50": 0.7601230769230769,
+      "species": [
+        "Fox",
+        "Wolf",
+        "Jackal",
+        "Brown Bear",
+        "Badger",
+        "Weasel",
+        "Stoat",
+        "Polecat",
+        "Marten",
+        "Otter",
+        "Wildcat"
+      ]
+    },
+    "Small_Mammals": {
+      "precision": 0.8523285147061908,
+      "recall": 0.8148148148148148,
+      "map50": 0.8947436012591609,
+      "species": [
+        "Rabbit",
+        "Hare",
+        "Squirrel",
+        "Dormouse",
+        "Hedgehog"
+      ]
+    },
+    "Other": {
+      "precision": 0.9074752990468578,
+      "recall": 0.8,
+      "map50": 0.9488461538461537,
+      "species": [
+        "Wild Boar",
+        "Chamois",
+        "Turtle",
+        "Human",
+        "Background",
+        "Dog"
+      ]
+    }
+  }
+}

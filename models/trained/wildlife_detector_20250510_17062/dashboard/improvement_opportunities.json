@@ -1,0 +1,59 @@
+{
+  "improvement_suggestions": [
+    "Consider collecting more training data for species with low detection accuracy.",
+    "Experiment with different confidence thresholds for deployment to balance precision and recall.",
+    "Consider using transfer learning with the hierarchical model to improve rare species detection.",
+    "For deployment, implement a two-stage detection pipeline using both models for better accuracy."
+  ],
+  "underrepresented_species": {
+    "Brown Bear": 10,
+    "Nightingale": 9,
+    "Rabbit": 13,
+    "Fallow Deer": 7,
+    "Hedgehog": 12
+  },
+  "problem_species": {
+    "Weasel": 24.570517928944057,
+    "Background": 20.109812383117614,
+    "Wildcat": 27.084106600408166,
+    "Human": 35.032854408584704
+  },
+  "taxonomic_group_performance": {
+    "Deer": {
+      "precision": 0.375,
+      "recall": 0.6257763975155279,
+      "map50": 0.41690310828877003,
+      "species": [
+        "Male Roe Deer",
+        "Female Roe Deer"
+      ]
+    },
+    "Carnivores": {
+      "precision": 0.45,
+      "recall": 0.3125,
+      "map50": 0.381,
+      "species": [
+        "Fox",
+        "Jackal",
+        "Weasel",
+        "Wildcat"
+      ]
+    },
+    "Small_Mammals": {
+      "precision": 0.631578947368421,
+      "recall": 0.8888888888888888,
+      "map50": 0.8610900648360029,
+      "species": [
+        "Rabbit"
+      ]
+    },
+    "Other": {
+      "precision": 0.6666666666666666,
+      "recall": 1.0,
+      "map50": 0.930897435897436,
+      "species": [
+        "Human"
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "notebook": "04_dashboard_integration",
+  "timestamp": "20250511_0441",
+  "input": {
+    "evaluation_config": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/evaluation_config_20250510_1957.json",
+    "standard_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_20250510_17062",
+    "hierarchical_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_hierarchical_20250510_17062"
+  },
+  "output": {
+    "dashboard_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441",
+    "standard_files": {
+      "performance_metrics": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/performance_metrics.json",
+      "class_metrics": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/class_metrics.json",
+      "confusion_matrix": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/confusion_matrix.json",
+      "training_history": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/training_history.json",
+      "model_details": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/model_details.json",
+      "detection_stats": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/detection_stats.json",
+      "improvement_opportunities": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/standard/improvement_opportunities.json"
+    },
+    "hierarchical_files": {
+      "performance_metrics": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/performance_metrics.json",
+      "class_metrics": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/class_metrics.json",
+      "confusion_matrix": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/confusion_matrix.json",
+      "training_history": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/training_history.json",
+      "model_details": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/model_details.json",
+      "detection_stats": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/detection_stats.json",
+      "improvement_opportunities": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/hierarchical/improvement_opportunities.json"
+    },
+    "standard_copy_success": true,
+    "hierarchical_copy_success": true,
+    "preview_created": true,
+    "preview_timestamp": "2025-05-11 04:51:03",
+    "integration_test_passed": true,
+    "integration_test_timestamp": "2025-05-11 04:51:15",
+    "report_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/dashboard/dashboard_20250511_0441/dashboard_integration_report.md"
+  }
+}

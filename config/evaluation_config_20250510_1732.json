@@ -1,0 +1,89 @@
+{
+  "notebook": "03_model_evaluation",
+  "timestamp": "20250510_1732",
+  "input": {
+    "training_config": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/training_config_20250510_1706.json",
+    "standard_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_20250510_17062/weights/best.pt",
+    "hierarchical_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_hierarchical_20250510_1706/weights/best.pt",
+    "standard_dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038",
+    "hierarchical_dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038",
+    "class_names": [
+      "Red Deer",
+      "Male Roe Deer",
+      "Female Roe Deer",
+      "Fallow Deer",
+      "Wild Boar",
+      "Chamois",
+      "Fox",
+      "Wolf",
+      "Jackal",
+      "Brown Bear",
+      "Badger",
+      "Weasel",
+      "Stoat",
+      "Polecat",
+      "Marten",
+      "Otter",
+      "Wildcat",
+      "Rabbit",
+      "Hare",
+      "Squirrel",
+      "Dormouse",
+      "Hedgehog",
+      "Turtle",
+      "Blackbird",
+      "Nightingale",
+      "Pheasant",
+      "Human",
+      "Background",
+      "Dog",
+      "woodpecker"
+    ],
+    "taxonomic_groups": {
+      "Deer": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "Carnivores": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "Small_Mammals": [
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "Birds": [
+        23,
+        24,
+        25,
+        29
+      ],
+      "Other": [
+        4,
+        5,
+        22,
+        26,
+        27,
+        28
+      ]
+    }
+  },
+  "output": {
+    "evaluation_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1732",
+    "reports_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports"
+  }
+}

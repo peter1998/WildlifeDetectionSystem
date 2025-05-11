@@ -1,0 +1,57 @@
+{
+  "total_recent": 1224,
+  "verified_count": 1026,
+  "correction_rate": 16.99396454022,
+  "species_corrections": {
+    "Weasel": {
+      "count": 191,
+      "corrected": 46,
+      "correction_rate": 24.570517928944057
+    },
+    "Marten": {
+      "count": 95,
+      "corrected": 5,
+      "correction_rate": 5.547159778781228
+    },
+    "Male Roe Deer": {
+      "count": 179,
+      "corrected": 26,
+      "correction_rate": 14.71321660063746
+    },
+    "Background": {
+      "count": 37,
+      "corrected": 7,
+      "correction_rate": 20.109812383117614
+    },
+    "Red Deer": {
+      "count": 60,
+      "corrected": 6,
+      "correction_rate": 10.864660495592322
+    },
+    "Wildcat": {
+      "count": 58,
+      "corrected": 15,
+      "correction_rate": 27.084106600408166
+    },
+    "Human": {
+      "count": 213,
+      "corrected": 74,
+      "correction_rate": 35.032854408584704
+    },
+    "Badger": {
+      "count": 54,
+      "corrected": 1,
+      "correction_rate": 3.691605255610993
+    },
+    "Stoat": {
+      "count": 208,
+      "corrected": 29,
+      "correction_rate": 14.373713759960264
+    },
+    "Hare": {
+      "count": 226,
+      "corrected": 10,
+      "correction_rate": 4.51480885037568
+    }
+  }
+}

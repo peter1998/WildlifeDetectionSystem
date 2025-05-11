@@ -1,0 +1,840 @@
+{
+  "notebook": "03_model_evaluation",
+  "timestamp": "20250510_1957",
+  "input": {
+    "training_config": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/config/training_config_20250510_1706.json",
+    "standard_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_20250510_17062",
+    "standard_best_model_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_20250510_17062/weights/best.pt",
+    "hierarchical_model": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_hierarchical_20250510_17062",
+    "hierarchical_best_model_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/models/trained/wildlife_detector_hierarchical_20250510_17062/weights/best.pt",
+    "standard_dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038",
+    "hierarchical_dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038",
+    "class_names": [
+      "Red Deer",
+      "Male Roe Deer",
+      "Female Roe Deer",
+      "Fallow Deer",
+      "Wild Boar",
+      "Chamois",
+      "Fox",
+      "Wolf",
+      "Jackal",
+      "Brown Bear",
+      "Badger",
+      "Weasel",
+      "Stoat",
+      "Polecat",
+      "Marten",
+      "Otter",
+      "Wildcat",
+      "Rabbit",
+      "Hare",
+      "Squirrel",
+      "Dormouse",
+      "Hedgehog",
+      "Turtle",
+      "Blackbird",
+      "Nightingale",
+      "Pheasant",
+      "Human",
+      "Background",
+      "Dog",
+      "woodpecker"
+    ],
+    "taxonomic_groups": {
+      "Deer": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "Carnivores": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "Small_Mammals": [
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "Birds": [
+        23,
+        24,
+        25,
+        29
+      ],
+      "Other": [
+        4,
+        5,
+        22,
+        26,
+        27,
+        28
+      ]
+    }
+  },
+  "output": {
+    "evaluation_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957",
+    "reports_dir": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports"
+  },
+  "standard_eval_results": {
+    "model_type": "standard",
+    "dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038",
+    "thresholds": {
+      "0.05": {
+        "precision": 0.7251679153207278,
+        "recall": 0.5400314751167223,
+        "mAP50": 0.6500945286017518,
+        "mAP50-95": 0.4110873552194114,
+        "val_images": 86,
+        "speed_ms": 11.047045139537998
+      },
+      "0.1": {
+        "precision": 0.4501680407011289,
+        "recall": 0.7615776685070164,
+        "mAP50": 0.6431266542810675,
+        "mAP50-95": 0.4098369060564826,
+        "val_images": 86,
+        "speed_ms": 5.579389825581615
+      },
+      "0.25": {
+        "precision": 0.48103070175438595,
+        "recall": 0.5488052104899931,
+        "mAP50": 0.5187242146638724,
+        "mAP50-95": 0.33028440646320806,
+        "val_images": 86,
+        "speed_ms": 6.664549476742524
+      },
+      "0.5": {
+        "precision": 0.5461538461538462,
+        "recall": 0.3725227168161951,
+        "mAP50": 0.4648861401625868,
+        "mAP50-95": 0.3060125274664906,
+        "val_images": 86,
+        "speed_ms": 4.177896290697877
+      },
+      "0.75": {
+        "precision": 0.375,
+        "recall": 0.14618055555555554,
+        "mAP50": 0.2605857142857143,
+        "mAP50-95": 0.1569772170386905,
+        "val_images": 86,
+        "speed_ms": 5.694756674423589
+      }
+    },
+    "threshold_df": {
+      "threshold": {
+        "0": 0.05,
+        "1": 0.1,
+        "2": 0.25,
+        "3": 0.5,
+        "4": 0.75
+      },
+      "precision": {
+        "0": 0.7251679153207278,
+        "1": 0.4501680407011289,
+        "2": 0.48103070175438595,
+        "3": 0.5461538461538462,
+        "4": 0.375
+      },
+      "recall": {
+        "0": 0.5400314751167223,
+        "1": 0.7615776685070164,
+        "2": 0.5488052104899931,
+        "3": 0.3725227168161951,
+        "4": 0.14618055555555554
+      },
+      "mAP50": {
+        "0": 0.6500945286017518,
+        "1": 0.6431266542810675,
+        "2": 0.5187242146638724,
+        "3": 0.4648861401625868,
+        "4": 0.2605857142857143
+      },
+      "mAP50-95": {
+        "0": 0.4110873552194114,
+        "1": 0.4098369060564826,
+        "2": 0.33028440646320806,
+        "3": 0.3060125274664906,
+        "4": 0.1569772170386905
+      },
+      "speed_ms": {
+        "0": 11.047045139537998,
+        "1": 5.579389825581615,
+        "2": 6.664549476742524,
+        "3": 4.177896290697877,
+        "4": 5.694756674423589
+      }
+    },
+    "threshold_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_threshold_analysis.png"
+  },
+  "hierarchical_eval_results": {
+    "model_type": "hierarchical",
+    "dataset": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038",
+    "thresholds": {
+      "0.05": {
+        "precision": 0.8968754651223766,
+        "recall": 0.7859620885909202,
+        "mAP50": 0.8902912387369527,
+        "mAP50-95": 0.5762751441346335,
+        "val_images": 86,
+        "speed_ms": 7.9613945465156535
+      },
+      "0.1": {
+        "precision": 0.8968754651223766,
+        "recall": 0.7859620885909202,
+        "mAP50": 0.8912969421032021,
+        "mAP50-95": 0.5809991864088195,
+        "val_images": 86,
+        "speed_ms": 15.968557558142829
+      },
+      "0.25": {
+        "precision": 0.8968754651223766,
+        "recall": 0.7859620885909202,
+        "mAP50": 0.8911017145434093,
+        "mAP50-95": 0.5852844644269557,
+        "val_images": 86,
+        "speed_ms": 6.05601601162477
+      },
+      "0.5": {
+        "precision": 0.8884904134904135,
+        "recall": 0.7941477191477191,
+        "mAP50": 0.8697110215010214,
+        "mAP50-95": 0.5831674124574835,
+        "val_images": 86,
+        "speed_ms": 6.56877990697763
+      },
+      "0.75": {
+        "precision": 0.9615384615384616,
+        "recall": 0.5616974116974117,
+        "mAP50": 0.7670574061355311,
+        "mAP50-95": 0.5427600054673822,
+        "val_images": 86,
+        "speed_ms": 5.686219372092256
+      }
+    },
+    "threshold_df": {
+      "threshold": {
+        "0": 0.05,
+        "1": 0.1,
+        "2": 0.25,
+        "3": 0.5,
+        "4": 0.75
+      },
+      "precision": {
+        "0": 0.8968754651223766,
+        "1": 0.8968754651223766,
+        "2": 0.8968754651223766,
+        "3": 0.8884904134904135,
+        "4": 0.9615384615384616
+      },
+      "recall": {
+        "0": 0.7859620885909202,
+        "1": 0.7859620885909202,
+        "2": 0.7859620885909202,
+        "3": 0.7941477191477191,
+        "4": 0.5616974116974117
+      },
+      "mAP50": {
+        "0": 0.8902912387369527,
+        "1": 0.8912969421032021,
+        "2": 0.8911017145434093,
+        "3": 0.8697110215010214,
+        "4": 0.7670574061355311
+      },
+      "mAP50-95": {
+        "0": 0.5762751441346335,
+        "1": 0.5809991864088195,
+        "2": 0.5852844644269557,
+        "3": 0.5831674124574835,
+        "4": 0.5427600054673822
+      },
+      "speed_ms": {
+        "0": 7.9613945465156535,
+        "1": 15.968557558142829,
+        "2": 6.05601601162477,
+        "3": 6.56877990697763,
+        "4": 5.686219372092256
+      }
+    },
+    "threshold_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_threshold_analysis.png"
+  },
+  "standard_class_results": {
+    "model_type": "standard",
+    "class_metrics": {
+      "Male Roe Deer": {
+        "precision": 0.5,
+        "recall": 0.6086956521739131,
+        "mAP50": 0.5400187165775401,
+        "mAP50-95": 0.3350404505365957
+      },
+      "Female Roe Deer": {
+        "precision": 0.25,
+        "recall": 0.6428571428571429,
+        "mAP50": 0.2937875,
+        "mAP50-95": 0.18899767229197056
+      },
+      "Fox": {
+        "precision": 0.8,
+        "recall": 0.5,
+        "mAP50": 0.649,
+        "mAP50-95": 0.40699942857142857
+      },
+      "Jackal": {
+        "precision": 1.0,
+        "recall": 0.75,
+        "mAP50": 0.875,
+        "mAP50-95": 0.658
+      },
+      "Weasel": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "mAP50": 0.0,
+        "mAP50-95": 0.0
+      },
+      "Wildcat": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "mAP50": 0.0,
+        "mAP50-95": 0.0
+      },
+      "Rabbit": {
+        "precision": 0.631578947368421,
+        "recall": 0.8888888888888888,
+        "mAP50": 0.8610900648360029,
+        "mAP50-95": 0.5166120592800283
+      },
+      "Human": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "mAP50": 0.930897435897436,
+        "mAP50-95": 0.5366256410256411
+      }
+    },
+    "class_df": {
+      "class": {
+        "7": "Human",
+        "3": "Jackal",
+        "6": "Rabbit",
+        "2": "Fox",
+        "0": "Male Roe Deer",
+        "1": "Female Roe Deer",
+        "5": "Wildcat",
+        "4": "Weasel"
+      },
+      "precision": {
+        "7": 0.6666666666666666,
+        "3": 1.0,
+        "6": 0.631578947368421,
+        "2": 0.8,
+        "0": 0.5,
+        "1": 0.25,
+        "5": 0.0,
+        "4": 0.0
+      },
+      "recall": {
+        "7": 1.0,
+        "3": 0.75,
+        "6": 0.8888888888888888,
+        "2": 0.5,
+        "0": 0.6086956521739131,
+        "1": 0.6428571428571429,
+        "5": 0.0,
+        "4": 0.0
+      },
+      "mAP50": {
+        "7": 0.930897435897436,
+        "3": 0.875,
+        "6": 0.8610900648360029,
+        "2": 0.649,
+        "0": 0.5400187165775401,
+        "1": 0.2937875,
+        "5": 0.0,
+        "4": 0.0
+      },
+      "mAP50-95": {
+        "7": 0.5366256410256411,
+        "3": 0.658,
+        "6": 0.5166120592800283,
+        "2": 0.40699942857142857,
+        "0": 0.3350404505365957,
+        "1": 0.18899767229197056,
+        "5": 0.0,
+        "4": 0.0
+      }
+    },
+    "per_class_map_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_per_class_map.png",
+    "precision_recall_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_precision_recall_by_class.png"
+  },
+  "hierarchical_class_results": {
+    "model_type": "hierarchical",
+    "class_metrics": {
+      "Deer": {
+        "precision": 0.9425017255085609,
+        "recall": 0.8861763966917227,
+        "mAP50": 0.9606940261452457,
+        "mAP50-95": 0.642970553252428
+      },
+      "Carnivores": {
+        "precision": 0.8851963212278973,
+        "recall": 0.6428571428571429,
+        "mAP50": 0.7601230769230769,
+        "mAP50-95": 0.5503567435897436
+      },
+      "Small_Mammals": {
+        "precision": 0.8523285147061908,
+        "recall": 0.8148148148148148,
+        "mAP50": 0.8947436012591609,
+        "mAP50-95": 0.5368581799132702
+      },
+      "Other": {
+        "precision": 0.9074752990468578,
+        "recall": 0.8,
+        "mAP50": 0.9488461538461537,
+        "mAP50-95": 0.6109523809523809
+      }
+    },
+    "class_df": {
+      "class": {
+        "0": "Deer",
+        "3": "Other",
+        "2": "Small_Mammals",
+        "1": "Carnivores"
+      },
+      "precision": {
+        "0": 0.9425017255085609,
+        "3": 0.9074752990468578,
+        "2": 0.8523285147061908,
+        "1": 0.8851963212278973
+      },
+      "recall": {
+        "0": 0.8861763966917227,
+        "3": 0.8,
+        "2": 0.8148148148148148,
+        "1": 0.6428571428571429
+      },
+      "mAP50": {
+        "0": 0.9606940261452457,
+        "3": 0.9488461538461537,
+        "2": 0.8947436012591609,
+        "1": 0.7601230769230769
+      },
+      "mAP50-95": {
+        "0": 0.642970553252428,
+        "3": 0.6109523809523809,
+        "2": 0.5368581799132702,
+        "1": 0.5503567435897436
+      }
+    },
+    "per_class_map_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_per_class_map.png",
+    "precision_recall_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_precision_recall_by_class.png"
+  },
+  "standard_confusion": {
+    "confusion_matrix": [
+      [
+        9,
+        14,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        5,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        27,
+        0
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        11
+      ]
+    ],
+    "normalized_confusion_matrix": [
+      [
+        0.391304347826087,
+        0.6086956521739131,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.45454545454545453,
+        0.5454545454545454,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.6666666666666666,
+        0.0,
+        0.0,
+        0.0,
+        0.3333333333333333,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.5,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.15384615384615385,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.8461538461538461
+      ]
+    ],
+    "class_labels": [
+      "Male Roe Deer",
+      "Female Roe Deer",
+      "Fox",
+      "Jackal",
+      "Weasel",
+      "Wildcat",
+      "Rabbit",
+      "Human"
+    ],
+    "confusion_matrix_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_confusion_matrix.png",
+    "normalized_confusion_matrix_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_normalized_confusion_matrix.png"
+  },
+  "hierarchical_confusion": {
+    "confusion_matrix": [
+      [
+        36,
+        0,
+        0,
+        1
+      ],
+      [
+        3,
+        7,
+        3,
+        0
+      ],
+      [
+        1,
+        0,
+        26,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        11
+      ]
+    ],
+    "normalized_confusion_matrix": [
+      [
+        0.972972972972973,
+        0.0,
+        0.0,
+        0.02702702702702703
+      ],
+      [
+        0.23076923076923078,
+        0.5384615384615384,
+        0.23076923076923078,
+        0.0
+      ],
+      [
+        0.037037037037037035,
+        0.0,
+        0.9629629629629629,
+        0.0
+      ],
+      [
+        0.08333333333333333,
+        0.0,
+        0.0,
+        0.9166666666666666
+      ]
+    ],
+    "class_labels": [
+      "Deer",
+      "Carnivores",
+      "Small_Mammals",
+      "Other"
+    ],
+    "confusion_matrix_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_confusion_matrix.png",
+    "normalized_confusion_matrix_plot": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_normalized_confusion_matrix.png"
+  },
+  "standard_error_analysis": {
+    "model_type": "standard",
+    "false_positives": {
+      "count": 30,
+      "examples": [
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0011_28_05_IMAG0148.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_positive_1.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0866_x_IMAG0021.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_positive_2.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0342_12_4__2024_IMAG0096.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_positive_3.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/1488_15_03_24_\u041c\u043e\u043b\u043b\u043e\u0432\u0430_\u043a\u0443\u0440\u0438\u044f_IMAG0345.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_positive_4.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0784_30_04_100BMCIM_IMAG0044.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_positive_5.jpg"
+        }
+      ]
+    },
+    "false_negatives": {
+      "count": 5,
+      "examples": [
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0006_28_05_IMAG0153.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_negative_1.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0815_15_09_molova_100BMCIM_IMAG0243.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_negative_2.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0021_28_05_IMAG0154.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_negative_3.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0921_20_12_IMAG0165.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_negative_4.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_export_test_01_20250510_0038/images/val/0083_11_09_100BMCIM_IMAG0024.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis/false_negative_5.jpg"
+        }
+      ]
+    },
+    "report_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/standard_error_analysis.md"
+  },
+  "hierarchical_error_analysis": {
+    "model_type": "hierarchical",
+    "false_positives": {
+      "count": 19,
+      "examples": [
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/0420_12_4__2024_IMAG0006.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_positive_1.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/1029_20_12_IMAG0182.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_positive_2.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/1419_15_03_24_\u041c\u043e\u043b\u043b\u043e\u0432\u0430_\u043a\u0443\u0440\u0438\u044f_IMAG0269.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_positive_3.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/1483_15_03_24_\u041c\u043e\u043b\u043b\u043e\u0432\u0430_\u043a\u0443\u0440\u0438\u044f_IMAG0326.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_positive_4.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/1123_15_03_24_\u041c\u043e\u043b\u043b\u043e\u0432\u0430_\u043a\u0443\u0440\u0438\u044f_IMAG0370.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_positive_5.jpg"
+        }
+      ]
+    },
+    "false_negatives": {
+      "count": 2,
+      "examples": [
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/0815_15_09_molova_100BMCIM_IMAG0243.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_negative_1.jpg"
+        },
+        {
+          "image_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/data/export/yolo_hierarchical_test_01_20250510_0038/images/val/1104_21_05_IMAG0132.JPG",
+          "visualization": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis/false_negative_2.jpg"
+        }
+      ]
+    },
+    "report_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/hierarchical_error_analysis.md"
+  },
+  "model_comparison": {
+    "comparison_data": {
+      "0.25": {
+        "precision": {
+          "standard": 0.48103070175438595,
+          "hierarchical": 0.8968754651223766,
+          "improvement": 86.44869482370811,
+          "improvement_percent": "86.4%"
+        },
+        "recall": {
+          "standard": 0.5488052104899931,
+          "hierarchical": 0.7859620885909202,
+          "improvement": 43.213306573599205,
+          "improvement_percent": "43.2%"
+        },
+        "mAP50": {
+          "standard": 0.5187242146638724,
+          "hierarchical": 0.8911017145434093,
+          "improvement": 71.78718273655942,
+          "improvement_percent": "71.8%"
+        },
+        "mAP50-95": {
+          "standard": 0.33028440646320806,
+          "hierarchical": 0.5852844644269557,
+          "improvement": 77.20620561363175,
+          "improvement_percent": "77.2%"
+        }
+      },
+      "0.5": {
+        "precision": {
+          "standard": 0.5461538461538462,
+          "hierarchical": 0.8884904134904135,
+          "improvement": 62.68134331514611,
+          "improvement_percent": "62.7%"
+        },
+        "recall": {
+          "standard": 0.3725227168161951,
+          "hierarchical": 0.7941477191477191,
+          "improvement": 113.18101777389225,
+          "improvement_percent": "113.2%"
+        },
+        "mAP50": {
+          "standard": 0.4648861401625868,
+          "hierarchical": 0.8697110215010214,
+          "improvement": 87.08043677035701,
+          "improvement_percent": "87.1%"
+        },
+        "mAP50-95": {
+          "standard": 0.3060125274664906,
+          "hierarchical": 0.5831674124574835,
+          "improvement": 90.56978395152214,
+          "improvement_percent": "90.6%"
+        }
+      }
+    },
+    "plot_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/model_comparison.png",
+    "report_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/model_comparison.md"
+  },
+  "comprehensive_report": {
+    "report_path": "/home/peter/Desktop/TU PHD/WildlifeDetectionSystem/reports/evaluation/evaluation_20250510_1957/comprehensive_evaluation_report.md"
+  }
+}

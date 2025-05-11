@@ -1,0 +1,32 @@
+{
+  "total_recent": 1548,
+  "verified_count": 1220,
+  "correction_rate": 16.365904958807274,
+  "species_corrections": {
+    "Deer": {
+      "count": 285,
+      "corrected": 57,
+      "correction_rate": 20.046227864616636
+    },
+    "Carnivores": {
+      "count": 307,
+      "corrected": 18,
+      "correction_rate": 6.030489779253616
+    },
+    "Small_Mammals": {
+      "count": 69,
+      "corrected": 19,
+      "correction_rate": 27.772345580224297
+    },
+    "Birds": {
+      "count": 179,
+      "corrected": 76,
+      "correction_rate": 42.5920757764641
+    },
+    "Other": {
+      "count": 140,
+      "corrected": 4,
+      "correction_rate": 3.118190491604968
+    }
+  }
+}
